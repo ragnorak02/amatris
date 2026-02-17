@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hybrid Knights — Completion Heatmap</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0a0a12;
+    color: #e0dce8;
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 2rem;
+    text-align: center;
+    background: linear-gradient(180deg, #12101f 0%, #0a0a12 100%);
+    border-bottom: 1px solid #2a2545;
+  }
+
+  header h1 { color: #d4af37; font-size: 1.8rem; }
+  header p { color: #8a84a0; margin-top: 0.3rem; }
+
+  .back-link {
+    display: inline-block;
+    margin: 1rem 2rem;
+    color: #8a84a0;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+
+  .back-link:hover { color: #d4af37; }
+
+  .heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem 2rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .heat-tile {
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+    border: 1px solid transparent;
+  }
+
+  .heat-tile:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  .heat-tile .tile-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+
+  .heat-tile .tile-pct {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 0.3rem;
+  }
+
+  .heat-tile .tile-phase {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem 2rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: #8a84a0;
+  }
+
+  .legend-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+  }
+
+  .loading { text-align: center; padding: 3rem; color: #6a6480; }
+
+  .summary {
+    text-align: center;
+    padding: 1rem;
+    color: #6a6480;
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 600px) {
+    .heatmap-grid { grid-template-columns: repeat(2, 1fr); padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Completion Heatmap</h1>
+  <p>Visual overview of project progress</p>
+</header>
+
+<a class="back-link" href="hybrid_knights_portal.html">&larr; Back to Portal</a>
+
+<div id="summary" class="summary"></div>
+
+<div class="heatmap-grid" id="heatmapGrid">
+  <div class="loading">Loading heatmap data...</div>
+</div>
+
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:#2a2545"></div>
+    <span>No Data</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:#7f1d1d"></div>
+    <span>0 – 24%</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:#7c2d12"></div>
+    <span>25 – 49%</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:#713f12"></div>
+    <span>50 – 74%</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:#14532d"></div>
+    <span>75 – 100%</span>
+  </div>
+</div>
+
+<script>
+(function() {
+  const GAMES = [
+    { folder: "Akma", title: "Akma" },
+    { folder: "crystal3d", title: "Hybrid Nights" },
+    { folder: "finalfantasy3d", title: "Korean Fantasy RPG" },
+    { folder: "fishing", title: "Isles of the Blue Current" },
+    { folder: "Hwarang's Path", title: "Hwarang's Path" },
+    { folder: "kingdomDefense", title: "Korean Fantasy TD" },
+    { folder: "mechWar", title: "MechWar" },
+    { folder: "monsterBattle", title: "Monster Catcher" },
+    { folder: "pocketDragon", title: "Dragon League" },
+    { folder: "smashLand", title: "SmashLand" },
+    { folder: "zelda", title: "Zelda" }
+  ];
+
+  function getHeatColor(pct) {
+    if (pct < 0) return { bg: '#1a1830', text: '#6a6480' };
+    if (pct < 25) return { bg: '#7f1d1d', text: '#fca5a5' };
+    if (pct < 50) return { bg: '#7c2d12', text: '#fdba74' };
+    if (pct < 75) return { bg: '#713f12', text: '#fde047' };
+    return { bg: '#14532d', text: '#86efac' };
+  }
+
+  async function loadHeatmap() {
+    const grid = document.getElementById('heatmapGrid');
+    const summaryEl = document.getElementById('summary');
+
+    const results = await Promise.all(GAMES.map(async (game) => {
+      let completion = -1;
+      let phase = 'Unknown';
+
+      try {
+        const res = await fetch(game.folder + '/claude.md');
+        if (res.ok) {
+          const text = await res.text();
+          const checked = (text.match(/- \[x\]/gi) || []).length;
+          const total = (text.match(/- \[[ x]\]/gi) || []).length;
+          if (total > 0) {
+            completion = Math.round((checked / total) * 100);
+          } else {
+            completion = 0;
+          }
+          const phaseMatch = text.match(/phase[:\s]+(\d+)/i) || text.match(/## Phase (\d+)/i);
+          if (phaseMatch) phase = 'Phase ' + phaseMatch[1];
+        }
+      } catch(e) {}
+
+      try {
+        const res2 = await fetch(game.folder + '/game_direction.md');
+        if (res2.ok) {
+          const text2 = await res2.text();
+          const phaseMatch2 = text2.match(/phase[:\s]+(\d+)/i) || text2.match(/## Phase (\d+)/i);
+          if (phaseMatch2) phase = 'Phase ' + phaseMatch2[1];
+        }
+      } catch(e) {}
+
+      return { ...game, completion, phase };
+    }));
+
+    // Summary
+    const withData = results.filter(r => r.completion >= 0);
+    const avgCompletion = withData.length > 0
+      ? Math.round(withData.reduce((s, r) => s + r.completion, 0) / withData.length)
+      : 0;
+    summaryEl.textContent = `${withData.length} of ${results.length} projects have tracking data | Average completion: ${withData.length > 0 ? avgCompletion + '%' : 'N/A'}`;
+
+    // Render tiles
+    grid.innerHTML = results.map(g => {
+      const colors = getHeatColor(g.completion);
+      const displayPct = g.completion < 0 ? '—' : g.completion + '%';
+      return `
+        <a class="heat-tile" href="${g.folder}/status.html"
+           style="background:${colors.bg}; color:${colors.text}">
+          <div class="tile-name">${g.title}</div>
+          <div class="tile-pct">${displayPct}</div>
+          <div class="tile-phase">${g.phase}</div>
+        </a>
+      `;
+    }).join('');
+  }
+
+  loadHeatmap();
+})();
+</script>
+</body>
+</html>

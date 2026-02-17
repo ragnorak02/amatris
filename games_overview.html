@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hybrid Knights — Games Overview</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0a0a12;
+    color: #e0dce8;
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 2rem;
+    text-align: center;
+    background: linear-gradient(180deg, #12101f 0%, #0a0a12 100%);
+    border-bottom: 1px solid #2a2545;
+  }
+
+  header h1 { color: #d4af37; font-size: 1.8rem; }
+  header p { color: #8a84a0; margin-top: 0.3rem; }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    padding: 1.5rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .controls input[type="text"] {
+    background: #151326;
+    border: 1px solid #2a2545;
+    color: #e0dce8;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .controls input:focus { outline: none; border-color: #d4af37; }
+
+  .controls select {
+    background: #151326;
+    border: 1px solid #2a2545;
+    color: #e0dce8;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  .controls button {
+    background: #d4af37;
+    color: #0a0a12;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .controls button:hover { background: #e6c84a; }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.25rem;
+    padding: 0 2rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .game-card {
+    background: #151326;
+    border: 1px solid #2a2545;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: transform 0.2s, border-color 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .game-card:hover {
+    transform: translateY(-3px);
+    border-color: #3a3560;
+  }
+
+  .game-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+
+  .game-card h3 {
+    font-size: 1.15rem;
+    color: #d4af37;
+  }
+
+  .game-card .engine-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .engine-godot { background: #1a2a3a; color: #60a5fa; }
+  .engine-unity { background: #2a1a2a; color: #c084fc; }
+  .engine-web { background: #1a3a2a; color: #4ade80; }
+
+  .game-card .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .tag {
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    background: #1a1830;
+    color: #8a84a0;
+  }
+
+  .game-card .progress-bar {
+    height: 6px;
+    background: #1a1830;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0.75rem 0 0.5rem;
+  }
+
+  .game-card .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s;
+  }
+
+  .game-card .details {
+    font-size: 0.85rem;
+    color: #6a6480;
+    line-height: 1.5;
+  }
+
+  .game-card .details strong { color: #8a84a0; }
+
+  .game-card .status-link {
+    display: inline-block;
+    margin-top: 0.75rem;
+    color: #d4af37;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .game-card .status-link:hover { text-decoration: underline; }
+
+  .no-results {
+    text-align: center;
+    padding: 3rem;
+    color: #6a6480;
+    grid-column: 1 / -1;
+  }
+
+  .back-link {
+    display: inline-block;
+    margin: 1rem 2rem;
+    color: #8a84a0;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+
+  .back-link:hover { color: #d4af37; }
+
+  .loading { text-align: center; padding: 3rem; color: #6a6480; }
+
+  @media (max-width: 600px) {
+    .cards-grid { grid-template-columns: 1fr; padding: 0 1rem 1rem; }
+    .controls { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Games Overview</h1>
+  <p>Portfolio-wide project dashboard</p>
+</header>
+
+<a class="back-link" href="hybrid_knights_portal.html">&larr; Back to Portal</a>
+
+<div class="controls">
+  <input type="text" id="searchInput" placeholder="Search games...">
+  <select id="engineFilter">
+    <option value="all">All Engines</option>
+    <option value="godot">Godot</option>
+    <option value="unity">Unity</option>
+    <option value="web">Web/JS</option>
+  </select>
+  <select id="sortBy">
+    <option value="name">Sort: Name</option>
+    <option value="completion">Sort: Completion</option>
+    <option value="engine">Sort: Engine</option>
+  </select>
+  <button id="refreshBtn">Refresh All</button>
+</div>
+
+<div class="cards-grid" id="cardsGrid">
+  <div class="loading">Loading game data...</div>
+</div>
+
+<script>
+(function() {
+  // Static game registry — updated by portfolio tooling
+  const GAMES = [
+    { folder: "Akma", title: "Akma", engine: "Godot 4.6", engineType: "godot", genre: "Roguelite", tone: "Dark Fantasy", description: "Korean Fantasy Roguelite — Turn-based grid battles" },
+    { folder: "crystal3d", title: "Hybrid Nights", engine: "Godot 4.6", engineType: "godot", genre: "Action", tone: "Fantasy", description: "3D character combat system" },
+    { folder: "finalfantasy3d", title: "Korean Fantasy RPG", engine: "Godot 4.6", engineType: "godot", genre: "RPG", tone: "Fantasy", description: "3D fantasy RPG" },
+    { folder: "fishing", title: "Isles of the Blue Current", engine: "Godot 4.6", engineType: "godot", genre: "Adventure", tone: "Relaxing", description: "Okinawa-inspired fishing adventure" },
+    { folder: "Hwarang's Path", title: "Hwarang's Path", engine: "Unity 6000.2.1f1", engineType: "unity", genre: "Strategy", tone: "Historical", description: "2D tactical strategy game" },
+    { folder: "kingdomDefense", title: "Korean Fantasy TD", engine: "Godot 4.4+", engineType: "godot", genre: "Tower Defense", tone: "Fantasy", description: "Isometric tower defense with Korean fantasy theme" },
+    { folder: "mechWar", title: "MechWar", engine: "Godot 4.6", engineType: "godot", genre: "Tactical", tone: "Sci-fi", description: "Isometric mech-based turn-based combat" },
+    { folder: "monsterBattle", title: "Monster Catcher", engine: "Godot 4.6", engineType: "godot", genre: "RPG", tone: "Whimsical", description: "Pokemon-style monster catching game" },
+    { folder: "pocketDragon", title: "Dragon League", engine: "Godot 4.4", engineType: "godot", genre: "RPG", tone: "Fantasy", description: "3D isometric dragon-battling RPG" },
+    { folder: "smashLand", title: "SmashLand", engine: "Godot 4.6", engineType: "godot", genre: "Fighting", tone: "Action", description: "Super Smash Bros-inspired 2D platform fighter" },
+    { folder: "zelda", title: "Zelda", engine: "HTML5/JS", engineType: "web", genre: "Action Adventure", tone: "Fantasy", description: "Browser-based action adventure" }
+  ];
+
+  const grid = document.getElementById('cardsGrid');
+  const searchInput = document.getElementById('searchInput');
+  const engineFilter = document.getElementById('engineFilter');
+  const sortBy = document.getElementById('sortBy');
+  const refreshBtn = document.getElementById('refreshBtn');
+
+  // Try to read claude.md for completion % via fetch
+  async function loadGameData() {
+    const results = await Promise.all(GAMES.map(async (game) => {
+      let phase = 'Unknown';
+      let completion = -1;
+      let nextStep = 'Add claude.md';
+      let hasClaudeMd = false;
+
+      try {
+        const res = await fetch(game.folder + '/claude.md');
+        if (res.ok) {
+          hasClaudeMd = true;
+          const text = await res.text();
+          // Extract completion from checkboxes
+          const checked = (text.match(/- \[x\]/gi) || []).length;
+          const total = (text.match(/- \[[ x]\]/gi) || []).length;
+          if (total > 0) {
+            completion = Math.round((checked / total) * 100);
+          }
+          // Try to detect phase
+          const phaseMatch = text.match(/phase[:\s]+(\d+[^\n]*)/i) || text.match(/## Phase (\d+[^\n]*)/i);
+          if (phaseMatch) phase = 'Phase ' + phaseMatch[1].trim();
+          nextStep = hasClaudeMd ? 'Continue development' : 'Add claude.md';
+        }
+      } catch(e) { /* fetch failed — no claude.md accessible */ }
+
+      try {
+        const res2 = await fetch(game.folder + '/game_direction.md');
+        if (res2.ok) {
+          const text2 = await res2.text();
+          const phaseMatch2 = text2.match(/phase[:\s]+(\d+[^\n]*)/i) || text2.match(/## Phase (\d+[^\n]*)/i);
+          if (phaseMatch2) phase = 'Phase ' + phaseMatch2[1].trim();
+        }
+      } catch(e) { /* no game_direction.md */ }
+
+      return { ...game, phase, completion, nextStep, hasClaudeMd };
+    }));
+
+    return results;
+  }
+
+  function getProgressColor(pct) {
+    if (pct < 0) return '#2a2545';
+    if (pct < 25) return '#ef4444';
+    if (pct < 50) return '#f97316';
+    if (pct < 75) return '#eab308';
+    return '#22c55e';
+  }
+
+  function getEngineClass(type) {
+    return 'engine-' + type;
+  }
+
+  function renderCards(games) {
+    if (games.length === 0) {
+      grid.innerHTML = '<div class="no-results">No games match your search.</div>';
+      return;
+    }
+
+    grid.innerHTML = games.map(g => `
+      <div class="game-card" data-engine="${g.engineType}">
+        <div class="card-header">
+          <h3>${g.title}</h3>
+          <span class="engine-badge ${getEngineClass(g.engineType)}">${g.engine}</span>
+        </div>
+        <div class="meta">
+          <span class="tag">${g.genre}</span>
+          <span class="tag">${g.tone}</span>
+          <span class="tag">${g.folder}</span>
+        </div>
+        <p class="details">${g.description}</p>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${g.completion < 0 ? 0 : g.completion}%;background:${getProgressColor(g.completion)}"></div>
+        </div>
+        <div class="details">
+          <strong>Phase:</strong> ${g.phase} &nbsp;|&nbsp;
+          <strong>Completion:</strong> ${g.completion < 0 ? 'N/A' : g.completion + '%'} &nbsp;|&nbsp;
+          <strong>Next:</strong> ${g.nextStep}
+        </div>
+        <a class="status-link" href="${g.folder}/status.html">View Status &rarr;</a>
+      </div>
+    `).join('');
+  }
+
+  let allGames = [];
+
+  function filterAndRender() {
+    let filtered = [...allGames];
+    const query = searchInput.value.toLowerCase();
+    const engine = engineFilter.value;
+    const sort = sortBy.value;
+
+    if (query) {
+      filtered = filtered.filter(g =>
+        g.title.toLowerCase().includes(query) ||
+        g.folder.toLowerCase().includes(query) ||
+        g.genre.toLowerCase().includes(query) ||
+        g.description.toLowerCase().includes(query)
+      );
+    }
+
+    if (engine !== 'all') {
+      filtered = filtered.filter(g => g.engineType === engine);
+    }
+
+    if (sort === 'name') filtered.sort((a, b) => a.title.localeCompare(b.title));
+    else if (sort === 'completion') filtered.sort((a, b) => b.completion - a.completion);
+    else if (sort === 'engine') filtered.sort((a, b) => a.engine.localeCompare(b.engine));
+
+    renderCards(filtered);
+  }
+
+  searchInput.addEventListener('input', filterAndRender);
+  engineFilter.addEventListener('change', filterAndRender);
+  sortBy.addEventListener('change', filterAndRender);
+
+  refreshBtn.addEventListener('click', async () => {
+    grid.innerHTML = '<div class="loading">Refreshing...</div>';
+    allGames = await loadGameData();
+    filterAndRender();
+  });
+
+  // Initial load
+  loadGameData().then(games => {
+    allGames = games;
+    filterAndRender();
+  });
+})();
+</script>
+</body>
+</html>

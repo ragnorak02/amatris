@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Nights — Studio OS</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/studio.css">
+    <link rel="stylesheet" href="css/overlay.css">
+</head>
+<body>
+    <!-- Starry night background layers -->
+    <div id="bg-stars" class="bg-layer"></div>
+    <div id="bg-clouds" class="bg-layer"></div>
+    <div id="bg-moon">
+        <div id="moon-clouds"></div>
+    </div>
+
+    <!-- Header -->
+    <header id="portal-header">
+        <h1 class="logo">Hybrid <span>Nights</span></h1>
+    </header>
+
+    <!-- Top Mini Menu Bar -->
+    <nav id="top-menu">
+        <ul id="menu-tabs">
+            <li class="menu-tab" data-tab="store">Store</li>
+            <li class="menu-tab active" data-tab="library">Library</li>
+            <li class="menu-tab" data-tab="news">News</li>
+            <li class="menu-tab" data-tab="mods">Mods</li>
+            <li class="menu-tab" data-tab="wip">WIP</li>
+            <li class="menu-tab" data-tab="patreon">Patreon</li>
+            <li class="menu-tab" data-tab="credits">Credits</li>
+        </ul>
+    </nav>
+
+    <!-- Studio Dashboard -->
+    <div id="studio-view">
+        <div id="studio-toolbar"></div>
+        <div id="studio-game-list"></div>
+    </div>
+
+    <!-- File Preview Side Panel -->
+    <div id="file-preview-panel" class="hidden">
+        <div class="preview-header">
+            <span class="preview-title">File Preview</span>
+            <button class="preview-close-btn" title="Close">&times;</button>
+        </div>
+        <div class="preview-content"></div>
+        <div class="preview-actions">
+            <button class="toolbar-btn" id="preview-download-btn">Download</button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         GAME VIEW — Shown when a game is active (replaces studio)
+         ============================================================ -->
+    <div id="game-view" class="hidden">
+        <iframe id="game-iframe" class="hidden" allowfullscreen></iframe>
+        <div id="game-external" class="hidden">
+            <div class="external-icon"></div>
+            <h2 class="external-title"></h2>
+            <p class="external-subtitle"></p>
+            <div class="external-pulse"></div>
+            <p class="external-hint">Press <kbd>Shift</kbd> + <kbd>Tab</kbd> for overlay</p>
+        </div>
+    </div>
+
+    <!-- Overlay toggle button (visible during gameplay) -->
+    <button id="overlay-toggle" class="hidden">Shift+Tab — Overlay</button>
+
+    <!-- ============================================================
+         OVERLAY — Toggled with Shift+Tab during gameplay
+         ============================================================ -->
+    <div id="overlay" class="hidden">
+        <div class="overlay-backdrop"></div>
+
+        <!-- Top-Center: Shortcut Strip -->
+        <div id="shortcut-strip">
+            <div class="shortcut-tile tile-purple" data-module="game">
+                <span class="tile-icon">&#127918;</span>
+                <span class="tile-label">Current Game</span>
+            </div>
+            <div class="shortcut-tile tile-red" data-module="volume">
+                <span class="tile-icon">&#128266;</span>
+                <span class="tile-label">Volume</span>
+            </div>
+            <div class="shortcut-tile tile-blue" data-module="friends">
+                <span class="tile-icon">&#128101;</span>
+                <span class="tile-label">Friends</span>
+            </div>
+            <div class="shortcut-tile tile-green" data-module="screenshots">
+                <span class="tile-icon">&#128248;</span>
+                <span class="tile-label">Screenshots</span>
+            </div>
+            <div class="shortcut-tile tile-gray" data-module="settings">
+                <span class="tile-icon">&#9881;</span>
+                <span class="tile-label">Settings</span>
+            </div>
+        </div>
+
+        <!-- Top-Left: Game Menu Panel (collapsible) -->
+        <div id="overlay-menu" class="side-panel">
+            <div class="panel-header">
+                <h3>Game Menu</h3>
+                <button class="collapse-btn" data-panel="menu" title="Collapse">&#9664;</button>
+            </div>
+            <div class="panel-content">
+                <button class="menu-btn" data-action="resume"><span>&#9654;</span> Resume Game</button>
+                <button class="menu-btn" data-action="restart"><span>&#8635;</span> Restart Game</button>
+                <div class="menu-divider"></div>
+                <button class="menu-btn" data-action="run-tests"><span>&#9889;</span> Run Tests</button>
+                <div class="menu-divider"></div>
+                <button class="menu-btn" data-action="launcher"><span>&#8962;</span> Back to Launcher</button>
+                <button class="menu-btn" data-action="close-game"><span>&#10005;</span> Close Game</button>
+                <div class="menu-divider"></div>
+                <button class="menu-btn danger" data-action="exit"><span>&#9211;</span> Exit Launcher</button>
+            </div>
+        </div>
+
+        <!-- Bottom-Left: Performance Panel (collapsible) -->
+        <div id="overlay-perf" class="side-panel">
+            <div class="panel-header">
+                <h3>Performance</h3>
+                <button class="collapse-btn" data-panel="perf" title="Collapse">&#9664;</button>
+            </div>
+            <div class="panel-content">
+                <div class="perf-row">
+                    <span class="perf-label">FPS</span>
+                    <span class="perf-value" id="perf-fps">--</span>
+                </div>
+                <div class="perf-row">
+                    <span class="perf-label">CPU</span>
+                    <span class="perf-value" id="perf-cpu">--</span>
+                </div>
+                <div class="perf-row">
+                    <span class="perf-label">RAM</span>
+                    <span class="perf-value" id="perf-ram">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Module Content (center, expands when a tile is clicked) -->
+        <div id="module-content" class="hidden"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/game-view.js"></script>
+    <script src="js/overlay.js"></script>
+    <script src="js/studio.js"></script>
+    <script src="js/file-preview.js"></script>
+    <script src="js/test-runner.js"></script>
+    <script src="js/background.js"></script>
+    <script src="js/gamepad.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

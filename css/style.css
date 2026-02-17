@@ -1,0 +1,304 @@
+/* ============================================================
+   Hybrid Knights — Game Portal Styles
+   Dark fantasy night theme with carousel game launcher.
+   ============================================================ */
+
+/* --- Reset & Base --- */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #05050f;
+    color: #e0dcd0;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+}
+
+/* --- Background Layers --- */
+.bg-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+#bg-stars {
+    background: radial-gradient(ellipse at 50% 0%, #0d1130 0%, #05050f 70%);
+}
+
+/* Individual star dots */
+.star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    animation: twinkle ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+    0%   { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+/* Moon */
+#bg-moon {
+    position: fixed;
+    top: 6%;
+    right: 12%;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #fce68a, #e6b830 60%, #c49520);
+    box-shadow:
+        0 0 40px 10px rgba(252, 230, 138, 0.25),
+        0 0 120px 40px rgba(252, 230, 138, 0.08);
+    z-index: 1;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.6s ease, box-shadow 0.6s ease, filter 0.6s ease;
+    overflow: hidden;
+}
+
+#bg-moon:hover {
+    transform: scale(1.15);
+    box-shadow:
+        0 0 60px 20px rgba(252, 230, 138, 0.4),
+        0 0 180px 60px rgba(252, 230, 138, 0.15),
+        0 0 300px 100px rgba(252, 230, 138, 0.05);
+    filter: brightness(1.2);
+}
+
+/* Dark clouds covering bottom half of the moon */
+#moon-clouds {
+    position: absolute;
+    bottom: -10px;
+    left: -30px;
+    right: -30px;
+    height: 70px;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 60px 35px at 20% 60%, rgba(15, 15, 30, 0.8), transparent),
+        radial-gradient(ellipse 80px 30px at 55% 50%, rgba(10, 10, 25, 0.9), transparent),
+        radial-gradient(ellipse 50px 25px at 80% 65%, rgba(20, 18, 35, 0.7), transparent),
+        radial-gradient(ellipse 90px 40px at 40% 70%, rgba(12, 12, 28, 0.85), transparent);
+    animation: moon-cloud-drift 12s ease-in-out infinite alternate;
+}
+
+@keyframes moon-cloud-drift {
+    0%   { transform: translateX(-4px); opacity: 0.85; }
+    50%  { opacity: 1; }
+    100% { transform: translateX(4px); opacity: 0.9; }
+}
+
+/* Drifting clouds */
+.cloud {
+    position: absolute;
+    width: 500px;
+    height: 80px;
+    background: radial-gradient(ellipse, rgba(180, 180, 210, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: drift linear infinite;
+    left: -500px;
+}
+
+@keyframes drift {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(calc(100vw + 1000px)); }
+}
+
+/* --- Header / Logo --- */
+#portal-header {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 36px 0 8px;
+}
+
+.logo {
+    font-size: 2.4rem;
+    font-weight: 300;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: #b8b0a0;
+}
+.logo span {
+    color: #f0c850;
+    font-weight: 700;
+}
+
+/* --- Top Mini Menu Bar --- */
+#top-menu {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 4px 8px;
+}
+
+#top-menu.hidden { display: none; }
+
+#menu-tabs {
+    list-style: none;
+    display: inline-flex;
+    gap: 28px;
+}
+
+.menu-tab {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #6a6450;
+    cursor: pointer;
+    position: relative;
+    padding-bottom: 4px;
+    transition: color 0.25s ease, text-shadow 0.25s ease;
+}
+
+.menu-tab:hover {
+    color: #b8b0a0;
+    text-shadow: 0 0 6px rgba(184, 176, 160, 0.3);
+}
+
+.menu-tab.active {
+    color: #f0c850;
+    text-shadow: 0 0 8px rgba(240, 200, 80, 0.4);
+}
+
+.menu-tab::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 1px;
+    transform: scaleX(0);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.menu-tab.active::after {
+    background: linear-gradient(90deg, transparent, #f0c850, transparent);
+    transform: scaleX(1);
+    opacity: 1;
+}
+
+.menu-tab:not(.active):hover::after {
+    background: linear-gradient(90deg, transparent, rgba(184, 176, 160, 0.4), transparent);
+    transform: scaleX(1);
+    opacity: 1;
+}
+
+/* (Carousel and stats panel removed — replaced by Studio dashboard) */
+
+/* --- Launch Overlay --- */
+.launch-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 5, 15, 0.92);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.4s;
+}
+.launch-overlay.visible { opacity: 1; }
+
+.launch-msg {
+    text-align: center;
+}
+.launch-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 16px;
+}
+.launch-msg h2 {
+    font-size: 1.6rem;
+    color: #f0c850;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+}
+
+.launch-status {
+    margin-top: 16px;
+    font-size: 0.85rem;
+    color: #a09880;
+    letter-spacing: 0.06em;
+    min-height: 1.2em;
+}
+
+.launch-spinner {
+    margin: 20px auto 0;
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(240, 200, 80, 0.2);
+    border-top-color: #f0c850;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- Gamepad Hints & Xbox Buttons --- */
+#gamepad-hints {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 10px;
+    opacity: 0.85;
+}
+#gamepad-hints.hidden { display: none; }
+
+.gp-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    color: #a09880;
+    letter-spacing: 0.04em;
+}
+
+.xbox-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+}
+
+.xbox-a  { background: #107C10; }
+.xbox-b  { background: #E74856; }
+.xbox-x  { background: #0078D7; }
+.xbox-y  { background: #FFB900; color: #1a1a1a; text-shadow: none; }
+
+.xbox-lb, .xbox-rb, .xbox-dpad {
+    border-radius: 10px;
+    width: auto;
+    padding: 2px 8px;
+    background: rgba(255,255,255,0.12);
+    font-size: 0.6rem;
+    letter-spacing: 0.04em;
+}
+
+/* Gamepad-focused menu item in overlay */
+.menu-btn.gamepad-focus {
+    background: rgba(240, 200, 80, 0.15);
+    box-shadow: inset 0 0 0 1px rgba(240, 200, 80, 0.5), 0 0 8px rgba(240, 200, 80, 0.15);
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .logo { font-size: 1.6rem; }
+    .game-card { width: 180px; height: 260px; }
+    .card-icon { font-size: 2.8rem; }
+    #stat-details { gap: 20px; }
+    .nav-btn { width: 40px; height: 40px; font-size: 1.4rem; }
+}
