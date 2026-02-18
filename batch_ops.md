@@ -1,6 +1,6 @@
 # Batch Operations Guide
 
-> Safe batch refactoring workflow for the Hybrid Knights game portfolio.
+> Safe batch refactoring workflow for the Amatris game portfolio.
 > All operations follow a PLAN → APPROVE → APPLY model.
 
 ---

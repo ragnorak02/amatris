@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hybrid Nights — Studio OS</title>
+    <title>Amatris</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="css/overlay.css">
@@ -18,7 +18,7 @@
 
     <!-- Header -->
     <header id="portal-header">
-        <h1 class="logo">Hybrid <span>Nights</span></h1>
+        <h1 class="logo">Amatris</h1>
     </header>
 
     <!-- Top Mini Menu Bar -->
@@ -37,8 +37,12 @@
     <!-- Studio Dashboard -->
     <div id="studio-view">
         <div id="studio-toolbar"></div>
+        <div id="genre-tabs"></div>
         <div id="studio-game-list"></div>
     </div>
+
+    <!-- Detail panel overlay (shown when a game is selected) -->
+    <div id="studio-detail-panel" class="hidden"></div>
 
     <!-- File Preview Side Panel -->
     <div id="file-preview-panel" class="hidden">
@@ -74,6 +78,9 @@
          ============================================================ -->
     <div id="overlay" class="hidden">
         <div class="overlay-backdrop"></div>
+
+        <!-- Overlay Game Title -->
+        <div id="overlay-game-title"></div>
 
         <!-- Top-Center: Shortcut Strip -->
         <div id="shortcut-strip">

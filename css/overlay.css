@@ -1,5 +1,5 @@
 /* ============================================================
-   Overlay & Game View Styles — Hybrid Nights Portal
+   Overlay & Game View Styles — Amatris Portal
    Dark fantasy theme, in-launcher overlay system.
    ============================================================ */
 
@@ -137,6 +137,28 @@
     inset: 0;
     background: rgba(5, 5, 15, 0.82);
     backdrop-filter: blur(6px);
+}
+
+/* ============================================================
+   OVERLAY GAME TITLE — Shows current game name
+   ============================================================ */
+#overlay-game-title {
+    position: absolute;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 102;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #f0c850;
+    letter-spacing: 0.08em;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow: 0 2px 12px rgba(240, 200, 80, 0.25);
+}
+
+#overlay.visible #overlay-game-title {
+    animation: slideInDown 0.35s ease-out 0.08s both;
 }
 
 /* ============================================================
@@ -402,7 +424,7 @@
    ============================================================ */
 #module-content {
     position: absolute;
-    top: 120px;
+    top: 140px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 101;

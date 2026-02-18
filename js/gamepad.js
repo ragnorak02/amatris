@@ -1,41 +1,36 @@
 /* ============================================================
-   gamepad.js — Xbox controller support for Hybrid Nights
-   Polls the Gamepad API, maps inputs to launcher/overlay actions,
-   and shows contextual Xbox button hints.
+   gamepad.js — Xbox controller support for Amatris
+   Polls the Gamepad API, maps inputs to launcher/overlay actions.
+   Navigates the 2D game grid with D-pad/stick, A=play, X=info.
    ============================================================ */
 
-const GamepadInput = (() => {
+var GamepadInput = (function () {
+    'use strict';
+
     /* ---- State ---- */
-    let connected = false;
-    let prevButtons = [];
-    let prevAxes = [];
-    let navRepeatTimer = 0;
-    let overlayFocusIndex = -1;
+    var connected = false;
+    var prevButtons = [];
+    var navRepeatTimer = 0;
+    var rightStickRepeatTimer = 0;
+    var overlayFocusIndex = -1;
+    var gridFocusIndex = -1;
+    var cardMenuIndex = -1; // -1=none, 0=Play, 1=Info
 
-    const NAV_REPEAT_MS = 200;
-    const STICK_DEADZONE = 0.5;
-
-    /* ---- DOM refs (set in init) ---- */
-    let hintsEl = null;
+    var NAV_REPEAT_MS = 180;
+    var STICK_DEADZONE = 0.5;
 
     /* ============================================================
        INIT
        ============================================================ */
     function init() {
-        hintsEl = document.getElementById('gamepad-hints');
-
-        window.addEventListener('gamepadconnected', (e) => {
+        window.addEventListener('gamepadconnected', function () {
             connected = true;
-            updateHints();
-            showHints(true);
         });
 
-        window.addEventListener('gamepaddisconnected', () => {
+        window.addEventListener('gamepaddisconnected', function () {
             connected = false;
-            showHints(false);
         });
 
-        // Start polling loop
         requestAnimationFrame(poll);
     }
 
@@ -46,24 +41,27 @@ const GamepadInput = (() => {
         requestAnimationFrame(poll);
         if (!connected) return;
 
-        const gamepads = navigator.getGamepads();
-        let gp = null;
-        for (let i = 0; i < gamepads.length; i++) {
+        var gamepads = navigator.getGamepads();
+        var gp = null;
+        for (var i = 0; i < gamepads.length; i++) {
             if (gamepads[i]) { gp = gamepads[i]; break; }
         }
         if (!gp) return;
 
-        const buttons = gp.buttons.map(b => b.pressed);
-        const axes = gp.axes.slice();
+        var buttons = [];
+        for (var b = 0; b < gp.buttons.length; b++) {
+            buttons[b] = gp.buttons[b].pressed;
+        }
+        var axes = gp.axes.slice();
 
-        // Rising-edge detection for buttons
-        const justPressed = buttons.map((pressed, i) =>
-            pressed && !(prevButtons[i] || false)
-        );
+        // Rising-edge detection
+        var justPressed = [];
+        for (var j = 0; j < buttons.length; j++) {
+            justPressed[j] = buttons[j] && !(prevButtons[j] || false);
+        }
 
-        // Determine state
-        const gameRunning = typeof GameView !== 'undefined' && GameView.isRunning();
-        const overlayOpen = typeof Overlay !== 'undefined' && Overlay.isOverlayOpen();
+        var gameRunning = typeof GameView !== 'undefined' && GameView.isRunning();
+        var overlayOpen = typeof Overlay !== 'undefined' && Overlay.isOverlayOpen();
 
         if (overlayOpen) {
             handleOverlayInput(justPressed, buttons, axes, timestamp);
@@ -74,59 +72,168 @@ const GamepadInput = (() => {
         }
 
         prevButtons = buttons;
-        prevAxes = axes;
     }
 
     /* ============================================================
-       LAUNCHER INPUT
+       DIRECTIONAL INPUT HELPER
+       Returns { up, down, left, right } with repeat logic
        ============================================================ */
-    function handleLauncherInput(justPressed, buttons, axes, timestamp) {
-        // A button (0) — launch focused game in studio list
-        if (justPressed[0]) {
-            var focusedRow = document.querySelector('.studio-row.gamepad-focus .launch-btn');
-            if (focusedRow) focusedRow.click();
-        }
+    function getDirections(justPressed, axes, timestamp) {
+        var up = justPressed[12] || false;
+        var down = justPressed[13] || false;
+        var left = justPressed[14] || false;
+        var right = justPressed[15] || false;
 
-        // D-pad Up/Down or left stick Y to navigate studio rows
-        var up = justPressed[12];
-        var down = justPressed[13];
-
+        var stickX = axes[0] || 0;
         var stickY = axes[1] || 0;
-        var stickUp = false;
-        var stickDown = false;
 
-        if (Math.abs(stickY) > STICK_DEADZONE) {
+        if (Math.abs(stickX) > STICK_DEADZONE || Math.abs(stickY) > STICK_DEADZONE) {
             if (timestamp - navRepeatTimer > NAV_REPEAT_MS) {
-                stickUp = stickY < -STICK_DEADZONE;
-                stickDown = stickY > STICK_DEADZONE;
+                if (stickY < -STICK_DEADZONE) up = true;
+                if (stickY > STICK_DEADZONE) down = true;
+                if (stickX < -STICK_DEADZONE) left = true;
+                if (stickX > STICK_DEADZONE) right = true;
                 navRepeatTimer = timestamp;
             }
-        } else {
+        } else if (!up && !down && !left && !right) {
             navRepeatTimer = 0;
         }
 
-        // Navigate studio rows
-        if (up || stickUp || down || stickDown) {
-            var rows = document.querySelectorAll('.studio-row');
-            if (rows.length === 0) return;
-            var currentFocus = document.querySelector('.studio-row.gamepad-focus');
-            var idx = -1;
-            if (currentFocus) {
-                for (var i = 0; i < rows.length; i++) {
-                    if (rows[i] === currentFocus) { idx = i; break; }
+        return { up: up, down: down, left: left, right: right };
+    }
+
+    /* ============================================================
+       LAUNCHER INPUT — 2D grid navigation
+       Left stick / D-pad = navigate grid
+       Right stick = navigate card menu (Play / Info)
+       A = confirm card menu selection (or Play if no menu selection)
+       ============================================================ */
+    function handleLauncherInput(justPressed, buttons, axes, timestamp) {
+        var cards = document.querySelectorAll('.game-card');
+        if (cards.length === 0) return;
+
+        var dir = getDirections(justPressed, axes, timestamp);
+
+        // Calculate grid dimensions
+        var cols = getGridColumns();
+
+        // Left stick / D-pad — navigate the grid
+        if (dir.up || dir.down || dir.left || dir.right) {
+            // Reset card menu when moving to a new card
+            cardMenuIndex = -1;
+            clearCardMenuFocus();
+
+            if (gridFocusIndex < 0) {
+                gridFocusIndex = 0;
+            } else {
+                var col = gridFocusIndex % cols;
+
+                if (dir.right) {
+                    gridFocusIndex = gridFocusIndex + 1;
+                    if (gridFocusIndex >= cards.length) gridFocusIndex = 0;
+                }
+                if (dir.left) {
+                    gridFocusIndex = gridFocusIndex - 1;
+                    if (gridFocusIndex < 0) gridFocusIndex = cards.length - 1;
+                }
+                if (dir.down) {
+                    var newIdx = gridFocusIndex + cols;
+                    if (newIdx >= cards.length) {
+                        gridFocusIndex = col < cards.length ? col : 0;
+                    } else {
+                        gridFocusIndex = newIdx;
+                    }
+                }
+                if (dir.up) {
+                    var newIdx2 = gridFocusIndex - cols;
+                    if (newIdx2 < 0) {
+                        var lastRowStart = Math.floor((cards.length - 1) / cols) * cols;
+                        var target = lastRowStart + col;
+                        gridFocusIndex = target < cards.length ? target : cards.length - 1;
+                    } else {
+                        gridFocusIndex = newIdx2;
+                    }
                 }
             }
-            if (up || stickUp) idx = idx <= 0 ? rows.length - 1 : idx - 1;
-            if (down || stickDown) idx = idx >= rows.length - 1 ? 0 : idx + 1;
-            rows.forEach(function(r) { r.classList.remove('gamepad-focus'); });
-            rows[idx].classList.add('gamepad-focus');
-            rows[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+            applyGridFocus(cards);
         }
 
-        // X button (2) — run tests for focused game
-        if (justPressed[2]) {
-            var focused = document.querySelector('.studio-row.gamepad-focus .test-btn');
-            if (focused) focused.click();
+        // Right stick — navigate card menu (Play / Info) on focused card
+        if (gridFocusIndex >= 0 && gridFocusIndex < cards.length) {
+            var rsX = axes[2] || 0;
+            var rsY = axes[3] || 0;
+            var rsMoved = false;
+
+            if (Math.abs(rsX) > STICK_DEADZONE || Math.abs(rsY) > STICK_DEADZONE) {
+                if (timestamp - rightStickRepeatTimer > NAV_REPEAT_MS) {
+                    if (rsX > STICK_DEADZONE || rsY > STICK_DEADZONE) {
+                        // Right or down -> next menu item
+                        cardMenuIndex = cardMenuIndex >= 1 ? 0 : cardMenuIndex + 1;
+                        rsMoved = true;
+                    } else if (rsX < -STICK_DEADZONE || rsY < -STICK_DEADZONE) {
+                        // Left or up -> prev menu item
+                        cardMenuIndex = cardMenuIndex <= 0 ? 1 : cardMenuIndex - 1;
+                        rsMoved = true;
+                    }
+                    rightStickRepeatTimer = timestamp;
+                }
+            } else {
+                rightStickRepeatTimer = 0;
+            }
+
+            if (rsMoved) {
+                applyCardMenuFocus(cards[gridFocusIndex]);
+            }
+        }
+
+        // A button (0) — confirm: click focused menu button, or default to Play
+        if (justPressed[0] && gridFocusIndex >= 0 && gridFocusIndex < cards.length) {
+            var focusedCard = cards[gridFocusIndex];
+            if (cardMenuIndex === 1) {
+                var infoBtn = focusedCard.querySelector('.card-action-btn.info-btn');
+                if (infoBtn) infoBtn.click();
+            } else {
+                // Default or cardMenuIndex === 0 -> Play
+                var playBtn = focusedCard.querySelector('.card-action-btn.play-btn');
+                if (playBtn) playBtn.click();
+            }
+        }
+
+        // B button (1) — close detail panel if open
+        if (justPressed[1]) {
+            if (typeof Studio !== 'undefined' && typeof Studio.closeDetailPanel === 'function') {
+                Studio.closeDetailPanel();
+            }
+        }
+    }
+
+    function applyCardMenuFocus(card) {
+        if (!card) return;
+        var btns = card.querySelectorAll('.card-action-btn');
+        for (var i = 0; i < btns.length; i++) {
+            btns[i].classList.toggle('gamepad-focus', i === cardMenuIndex);
+        }
+    }
+
+    function clearCardMenuFocus() {
+        var focused = document.querySelectorAll('.card-action-btn.gamepad-focus');
+        for (var i = 0; i < focused.length; i++) {
+            focused[i].classList.remove('gamepad-focus');
+        }
+    }
+
+    function getGridColumns() {
+        var list = document.getElementById('studio-game-list');
+        if (!list) return 4;
+        var style = window.getComputedStyle(list);
+        var cols = style.getPropertyValue('grid-template-columns').split(' ').length;
+        return cols || 4;
+    }
+
+    function applyGridFocus(cards) {
+        for (var i = 0; i < cards.length; i++) {
+            cards[i].classList.toggle('gamepad-focus', i === gridFocusIndex);
         }
     }
 
@@ -138,7 +245,6 @@ const GamepadInput = (() => {
         if (justPressed[9]) {
             Overlay.toggle();
             overlayFocusIndex = -1;
-            updateHints();
         }
     }
 
@@ -146,43 +252,25 @@ const GamepadInput = (() => {
        OVERLAY INPUT
        ============================================================ */
     function handleOverlayInput(justPressed, buttons, axes, timestamp) {
-        const menuBtns = getOverlayMenuButtons();
+        var menuBtns = getOverlayMenuButtons();
 
-        // B button (1) or Menu/Start (9) — close overlay
+        // B button (1) or Start (9) — close overlay
         if (justPressed[1] || justPressed[9]) {
             clearOverlayFocus(menuBtns);
             Overlay.close();
-            updateHints();
             return;
         }
 
-        // D-pad Up (12) / Down (13) — navigate menu
-        const up = justPressed[12];
-        const down = justPressed[13];
+        var dir = getDirections(justPressed, axes, timestamp);
 
-        // Left stick Y with repeat
-        const stickY = axes[1] || 0;
-        let stickUp = false;
-        let stickDown = false;
-
-        if (Math.abs(stickY) > STICK_DEADZONE) {
-            if (timestamp - navRepeatTimer > NAV_REPEAT_MS) {
-                stickUp = stickY < -STICK_DEADZONE;
-                stickDown = stickY > STICK_DEADZONE;
-                navRepeatTimer = timestamp;
-            }
-        } else {
-            navRepeatTimer = 0;
-        }
-
-        if ((up || stickUp) && menuBtns.length > 0) {
+        if (dir.up && menuBtns.length > 0) {
             overlayFocusIndex = overlayFocusIndex <= 0
                 ? menuBtns.length - 1
                 : overlayFocusIndex - 1;
             applyOverlayFocus(menuBtns);
         }
 
-        if ((down || stickDown) && menuBtns.length > 0) {
+        if (dir.down && menuBtns.length > 0) {
             overlayFocusIndex = overlayFocusIndex >= menuBtns.length - 1
                 ? 0
                 : overlayFocusIndex + 1;
@@ -195,57 +283,27 @@ const GamepadInput = (() => {
         }
     }
 
-    /* ---- Overlay menu helpers ---- */
     function getOverlayMenuButtons() {
-        const panel = document.querySelector('#overlay-menu .panel-content');
+        var panel = document.querySelector('#overlay-menu .panel-content');
         if (!panel) return [];
         return Array.from(panel.querySelectorAll('.menu-btn'));
     }
 
     function applyOverlayFocus(menuBtns) {
-        menuBtns.forEach((btn, i) => {
-            btn.classList.toggle('gamepad-focus', i === overlayFocusIndex);
-        });
+        for (var i = 0; i < menuBtns.length; i++) {
+            menuBtns[i].classList.toggle('gamepad-focus', i === overlayFocusIndex);
+        }
     }
 
     function clearOverlayFocus(menuBtns) {
         overlayFocusIndex = -1;
-        menuBtns.forEach(btn => btn.classList.remove('gamepad-focus'));
-    }
-
-    /* ============================================================
-       BUTTON HINTS
-       ============================================================ */
-    function showHints(visible) {
-        if (!hintsEl) return;
-        hintsEl.classList.toggle('hidden', !visible);
-    }
-
-    function updateHints() {
-        if (!hintsEl || !connected) return;
-
-        const gameRunning = typeof GameView !== 'undefined' && GameView.isRunning();
-        const overlayOpen = typeof Overlay !== 'undefined' && Overlay.isOverlayOpen();
-
-        if (overlayOpen) {
-            hintsEl.innerHTML = `
-                <span class="gp-hint"><span class="xbox-btn xbox-a">A</span> Select</span>
-                <span class="gp-hint"><span class="xbox-btn xbox-b">B</span> Back</span>
-                <span class="gp-hint"><span class="xbox-btn xbox-dpad">D-pad</span> Navigate</span>
-            `;
-        } else if (!gameRunning) {
-            hintsEl.innerHTML = `
-                <span class="gp-hint"><span class="xbox-btn xbox-a">A</span> Launch</span>
-                <span class="gp-hint"><span class="xbox-btn xbox-lb">LB</span><span class="xbox-btn xbox-rb">RB</span> Navigate</span>
-            `;
-        } else {
-            // Game is running, overlay is closed — no hints (game has focus)
-            hintsEl.innerHTML = '';
+        for (var i = 0; i < menuBtns.length; i++) {
+            menuBtns[i].classList.remove('gamepad-focus');
         }
     }
 
     /* ============================================================
        PUBLIC API
        ============================================================ */
-    return { init, updateHints };
+    return { init: init };
 })();

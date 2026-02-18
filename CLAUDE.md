@@ -1,4 +1,4 @@
-# Hybrid Knights — Studio OS
+# Amatris — Studio OS
 
 ## Project Overview
 This is a game development portfolio containing a **web-based Studio OS launcher** and **11 game projects** across multiple engines. The launcher serves as a data-dense development dashboard for browsing, launching, testing, and managing all games.
@@ -112,7 +112,7 @@ Each game has its own `claude.md`/`CLAUDE.md` with detailed architecture docs an
 ### General
 - Dark fantasy theme throughout — night colors, gold accents (#f0c850, #d4af37)
 - No npm/node_modules — server.js uses only Node built-ins (http, fs, path, os, child_process)
-- Desktop shortcut: `Hybrid Knights Dashboard.bat` on Desktop opens the portfolio portal
+- Desktop shortcut: `Amatris Dashboard.bat` on Desktop opens the portfolio portal
 
 ## Known Issues
 - Menu tabs (Store, News, Mods, etc.) are placeholder — only Library works

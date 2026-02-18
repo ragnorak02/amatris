@@ -1,0 +1,23 @@
+# Ignore everything by default
+/*
+
+# Except these launcher directories
+!.claude/
+!.git/
+!css/
+!js/
+!refImages/
+!scripts/
+
+# And root-level launcher files
+!.gitignore
+!*.html
+!*.md
+!*.json
+!*.ico
+!server.js
+!index.html
+
+# Always ignore binaries and node artifacts
+*.exe
+node_modules/

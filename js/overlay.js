@@ -1,5 +1,5 @@
 /* ============================================================
-   overlay.js — In-game overlay system for Hybrid Nights
+   overlay.js — In-game overlay system for Amatris
    Toggle with Shift+Tab. Contains shortcut strip, game menu,
    performance panel, and expandable modules (friends, volume,
    screenshots, settings).
@@ -122,6 +122,19 @@ const Overlay = (() => {
 
         const overlay = document.getElementById('overlay');
         overlay.classList.remove('hidden');
+
+        // Show current game name
+        var titleEl = document.getElementById('overlay-game-title');
+        if (titleEl) {
+            var game = GameView.getCurrentGame();
+            if (game) {
+                var data = (typeof Studio !== 'undefined' && Studio.findGame(game.id)) || game;
+                titleEl.textContent = data.name || data.title || '';
+            } else {
+                titleEl.textContent = '';
+            }
+        }
+
         // Trigger reflow for animation
         overlay.offsetHeight;
         overlay.classList.add('visible');

@@ -1,5 +1,5 @@
 /* ============================================================
-   server.js — Hybrid Nights Studio OS server
+   server.js — Amatris Studio OS server
    Serves the portal UI and provides endpoints for launching
    games, system stats, game management, and Studio OS APIs.
 
@@ -14,40 +14,70 @@ const os = require('os');
 const { exec, execFile } = require('child_process');
 
 const PORT = 3000;
-const LAUNCHER_DIR = __dirname;
-const GAMES_DIR = path.join(__dirname, '..', 'Games');
+const IS_PKG = typeof process.pkg !== 'undefined';
+const BASE_DIR = IS_PKG ? path.dirname(process.execPath) : __dirname;
+const LAUNCHER_DIR = BASE_DIR;
+const GAMES_DIR = BASE_DIR;
 const GODOT_EXE = String.raw`C:\Users\nick\Downloads\Godot_v4.6-stable_win64.exe\Godot_v4.6-stable_win64.exe`;
 const GODOT_CONSOLE_EXE = String.raw`Z:\Godot\Godot_v4.6-stable_win64_console.exe`;
 const SCREENSHOTS_DIR = path.join(GAMES_DIR, 'screenshots');
 
 /* ---- Known game folders (id -> folder name) ---- */
-const GAME_FOLDERS = {
-    akma: 'Akma',
-    crystal3d: 'crystal3d',
-    finalfantasy3d: 'finalfantasy3d',
-    fishing: 'fishing',
-    'hwarangs-path': "Hwarang's Path",
-    kingdomdefense: 'kingdomDefense',
-    mechwar: 'mechWar',
-    monsterbattle: 'monsterBattle',
-    pocketdragon: 'pocketDragon',
-    smashland: 'smashLand',
-    zelda: 'zelda'
-};
+/* Auto-discovered from disk + static fallback. Any subfolder containing
+   game.config.json OR claude.md/CLAUDE.md is treated as a game project.
+   Non-game folders (.claude, css, js, refImages, scripts, node_modules,
+   .git, screenshots) are excluded. */
+const NON_GAME_DIRS = new Set([
+    '.claude', '.git', 'css', 'js', 'refImages', 'scripts',
+    'node_modules', 'screenshots'
+]);
+
+function discoverGameFolders() {
+    const folders = {};
+    try {
+        const entries = fs.readdirSync(GAMES_DIR, { withFileTypes: true });
+        for (const entry of entries) {
+            if (!entry.isDirectory()) continue;
+            if (NON_GAME_DIRS.has(entry.name)) continue;
+            if (entry.name.startsWith('.')) continue;
+
+            const dirPath = path.join(GAMES_DIR, entry.name);
+            // Check if it looks like a game folder
+            const hasConfig = fs.existsSync(path.join(dirPath, 'game.config.json'));
+            const hasClaudeMd = fs.existsSync(path.join(dirPath, 'claude.md'))
+                || fs.existsSync(path.join(dirPath, 'CLAUDE.md'));
+            const hasProjectGodot = fs.existsSync(path.join(dirPath, 'project.godot'));
+
+            if (hasConfig || hasClaudeMd || hasProjectGodot) {
+                // Generate id from folder name: lowercase, spaces to hyphens
+                const id = entry.name.toLowerCase().replace(/['\s]+/g, '-').replace(/[^a-z0-9-]/g, '');
+                folders[id] = entry.name;
+            }
+        }
+    } catch (e) {
+        console.error('[WARN] Could not scan for game folders:', e.message);
+    }
+    return folders;
+}
+
+const GAME_FOLDERS = discoverGameFolders();
+console.log(`  Discovered ${Object.keys(GAME_FOLDERS).length} game(s):`, Object.values(GAME_FOLDERS).join(', '));
 
 /* ---- Icon/color fallbacks for games without them in config ---- */
 const GAME_ICONS = {
     akma: '\u2694\uFE0F', crystal3d: '\uD83D\uDC8E', finalfantasy3d: '\u2728',
     fishing: '\uD83C\uDFA3', 'hwarangs-path': '\uD83C\uDFF9', kingdomdefense: '\uD83C\uDFF0',
     mechwar: '\uD83E\uDD16', monsterbattle: '\uD83D\uDC7E', pocketdragon: '\uD83D\uDC09',
-    smashland: '\uD83D\uDCA5', zelda: '\uD83D\uDDE1\uFE0F'
+    smashland: '\uD83D\uDCA5', zelda: '\uD83D\uDDE1\uFE0F',
+    lastfantasy: '\u2694\uFE0F', drift: '\uD83C\uDFCE\uFE0F', rythemwar: '\uD83E\uDD41'
 };
 
 const GAME_COLORS = {
     akma: '#8b0000', crystal3d: '#4a1a6b', finalfantasy3d: '#1a3a6b',
     fishing: '#1a5a5a', 'hwarangs-path': '#6b3a1a', kingdomdefense: '#2a5a1a',
     mechwar: '#4a4a4a', monsterbattle: '#2c1a4a', pocketdragon: '#8b3a00',
-    smashland: '#6b1a3a', zelda: '#2e5930'
+    smashland: '#6b1a3a', zelda: '#2e5930',
+    lastfantasy: '#1a1a6b', drift: '#3a3a3a', rythemwar: '#6b1a4a'
 };
 
 /* ---- Running game processes (gameId -> child) ---- */
@@ -347,7 +377,13 @@ function runTests(gameId, res) {
             cmd = `node "${testPath}"`;
             break;
         case 'godot':
-            cmd = `"${GODOT_CONSOLE_EXE}" --headless --path "${folderPath}" --script ${testRunner.file}`;
+            // Support projectSubdir for games with Godot project in a subdirectory
+            let godotTestDir = folderPath;
+            try {
+                const tc = JSON.parse(fs.readFileSync(path.join(folderPath, 'game.config.json'), 'utf8'));
+                if (tc.launch && tc.launch.projectSubdir) godotTestDir = path.join(folderPath, tc.launch.projectSubdir);
+            } catch (e) { /* use default */ }
+            cmd = `"${GODOT_CONSOLE_EXE}" --headless --path "${godotTestDir}" --script ${testRunner.file}`;
             break;
     }
 
@@ -509,7 +545,11 @@ function launchGame(gameId, res) {
 
     // Godot launch
     if (engineType === 'godot') {
-        const cmd = `"${GODOT_EXE}" --path "${folderPath}"`;
+        // Support projectSubdir for games with Godot project in a subdirectory
+        const projectDir = (config.launch && config.launch.projectSubdir)
+            ? path.join(folderPath, config.launch.projectSubdir)
+            : folderPath;
+        const cmd = `"${GODOT_EXE}" --path "${projectDir}"`;
         console.log(`[LAUNCH] ${cmd}`);
 
         const child = exec(cmd, (err) => {
@@ -652,7 +692,8 @@ const server = http.createServer((req, res) => {
     }
 
     // Static file serving — try launcher dir first, then games dir (for game assets)
-    const requestedFile = pathname === '/' ? 'index.html' : pathname;
+    const decodedPath = decodeURIComponent(pathname);
+    const requestedFile = decodedPath === '/' ? 'index.html' : decodedPath;
     let filePath = path.join(LAUNCHER_DIR, requestedFile);
     const ext = path.extname(filePath);
 
@@ -677,5 +718,8 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`\n  \uD83C\uDF19 Hybrid Nights Studio OS running at http://localhost:${PORT}\n`);
+    console.log(`\n  \uD83C\uDF19 Amatris running at http://localhost:${PORT}\n`);
+    if (IS_PKG) {
+        exec(`start http://localhost:${PORT}`);
+    }
 });

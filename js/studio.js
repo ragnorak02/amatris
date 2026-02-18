@@ -1,7 +1,6 @@
 /* ============================================================
-   studio.js — Studio Dashboard for Hybrid Knights
-   Vertical game list with filtering, sorting, expandable details,
-   and game launching. Replaces the carousel.
+   studio.js — Studio Dashboard for Amatris
+   Steam-style two-column layout: game list sidebar + detail panel.
    ============================================================ */
 
 var Studio = (function () {
@@ -9,17 +8,26 @@ var Studio = (function () {
 
     /* ---- State ---- */
     var games = [];
-    var expandedId = null;
+    var selectedId = null;
     var activeTab = {};
     var searchQuery = '';
-    var engineFilter = 'all';
+    var genreFilter = 'all';
     var sortBy = 'name';
     var CACHE_TTL = 30000; // 30s sessionStorage cache
     var runningPollTimer = null;
     var POLL_INTERVAL = 3000; // 3s polling for running games
 
+    /* ---- Genre categories ---- */
+    var GENRE_MAP = [
+        { key: 'all', label: 'All' },
+        { key: 'rpg', label: 'RPG' },
+        { key: 'action', label: 'Action' },
+        { key: 'adventure', label: 'Adventure' },
+        { key: 'strategy', label: 'Strategy' }
+    ];
+
     /* ---- DOM refs ---- */
-    var viewEl, toolbarEl, listEl;
+    var viewEl, toolbarEl, listEl, detailEl, genreTabsEl;
 
     /* ============================================================
        INIT
@@ -27,6 +35,9 @@ var Studio = (function () {
     function init() {
         viewEl = document.getElementById('studio-view');
         if (!viewEl) return;
+
+        detailEl = document.getElementById('studio-detail-panel');
+        genreTabsEl = document.getElementById('genre-tabs');
 
         renderToolbar();
         fetchGames();
@@ -41,49 +52,38 @@ var Studio = (function () {
 
         // Keyboard navigation
         document.addEventListener('keydown', function (e) {
-            // Only handle when studio is visible and no game running
             if (typeof GameView !== 'undefined' && GameView.isRunning()) return;
             if (typeof FilePreview !== 'undefined' && FilePreview.isOpen()) {
                 if (e.key === 'Escape') { FilePreview.close(); e.preventDefault(); }
                 return;
             }
 
-            var rows = document.querySelectorAll('.studio-row');
-            if (rows.length === 0) return;
+            var cards = document.querySelectorAll('.game-card');
+            if (cards.length === 0) return;
 
-            var focused = document.querySelector('.studio-row.keyboard-focus');
             var idx = -1;
-            if (focused) {
-                for (var i = 0; i < rows.length; i++) {
-                    if (rows[i] === focused) { idx = i; break; }
+            if (selectedId) {
+                for (var i = 0; i < cards.length; i++) {
+                    if (cards[i].dataset.gameId === selectedId) { idx = i; break; }
                 }
             }
 
             if (e.key === 'ArrowDown' || e.key === 'j') {
                 e.preventDefault();
-                idx = idx >= rows.length - 1 ? 0 : idx + 1;
-                setKeyboardFocus(rows, idx);
+                idx = idx >= cards.length - 1 ? 0 : idx + 1;
+                selectGame(cards[idx].dataset.gameId);
+                cards[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             } else if (e.key === 'ArrowUp' || e.key === 'k') {
                 e.preventDefault();
-                idx = idx <= 0 ? rows.length - 1 : idx - 1;
-                setKeyboardFocus(rows, idx);
-            } else if (e.key === 'Enter' && focused) {
+                idx = idx <= 0 ? cards.length - 1 : idx - 1;
+                selectGame(cards[idx].dataset.gameId);
+                cards[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            } else if (e.key === 'Enter' && selectedId) {
                 e.preventDefault();
-                var gameId = focused.dataset.gameId;
-                if (expandedId === gameId) {
-                    // Launch if already expanded
-                    var game = findGame(gameId);
-                    if (game) launchGame(game);
-                } else {
-                    toggleExpand(gameId);
-                }
+                var game = findGame(selectedId);
+                if (game) launchGame(game);
             } else if (e.key === 'Escape') {
-                if (expandedId) {
-                    expandedId = null;
-                    renderGameList();
-                } else {
-                    clearKeyboardFocus();
-                }
+                closeDetailPanel();
             }
         });
 
@@ -120,24 +120,27 @@ var Studio = (function () {
         fetch('/api/running')
             .then(function (r) { return r.json(); })
             .then(function (running) {
-                var rows = document.querySelectorAll('.studio-row');
-                rows.forEach(function (row) {
-                    var gameId = row.dataset.gameId;
+                var cards = document.querySelectorAll('.game-card');
+                cards.forEach(function (card) {
+                    var gameId = card.dataset.gameId;
                     var isRunning = running.hasOwnProperty(gameId);
-                    row.classList.toggle('running', isRunning);
-
-                    // Swap launch button icon
-                    var launchBtn = row.querySelector('.launch-btn');
-                    if (launchBtn) {
-                        if (isRunning) {
-                            launchBtn.textContent = '\u25A0'; // Stop square
-                            launchBtn.title = 'Stop Game';
-                        } else {
-                            launchBtn.textContent = '\u25B6'; // Play triangle
-                            launchBtn.title = 'Launch';
-                        }
-                    }
+                    card.classList.toggle('running', isRunning);
                 });
+
+                // Update detail panel launch button if selected game state changed
+                if (selectedId && running.hasOwnProperty(selectedId)) {
+                    var btn = detailEl ? detailEl.querySelector('.detail-action-btn.launch-btn') : null;
+                    if (btn) {
+                        btn.innerHTML = '\u25A0 Stop';
+                        btn.title = 'Stop Game';
+                    }
+                } else if (selectedId) {
+                    var btn2 = detailEl ? detailEl.querySelector('.detail-action-btn.launch-btn') : null;
+                    if (btn2 && btn2.textContent.indexOf('Stop') !== -1) {
+                        btn2.innerHTML = '\u25B6 Launch';
+                        btn2.title = 'Launch';
+                    }
+                }
             })
             .catch(function () { /* ignore network errors */ });
     }
@@ -146,13 +149,12 @@ var Studio = (function () {
        FETCH GAMES — From /api/games with sessionStorage cache
        ============================================================ */
     function fetchGames(callback) {
-        // Check cache
         try {
             var cached = sessionStorage.getItem('studio-games');
             var cacheTime = parseInt(sessionStorage.getItem('studio-games-ts') || '0');
             if (cached && (Date.now() - cacheTime) < CACHE_TTL) {
                 games = JSON.parse(cached);
-                renderGameList();
+                onGamesLoaded();
                 if (callback) callback();
                 return;
             }
@@ -162,24 +164,27 @@ var Studio = (function () {
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 games = data;
-                // Cache in sessionStorage
                 try {
                     sessionStorage.setItem('studio-games', JSON.stringify(games));
                     sessionStorage.setItem('studio-games-ts', String(Date.now()));
                 } catch (e) { /* ignore */ }
-                renderGameList();
+                onGamesLoaded();
                 if (callback) callback();
             })
             .catch(function () {
-                // If API fails, show empty state
                 games = [];
-                renderGameList();
+                onGamesLoaded();
                 if (callback) callback();
             });
     }
 
+    function onGamesLoaded() {
+        renderGenreTabs();
+        renderGameList();
+    }
+
     /* ============================================================
-       TOOLBAR
+       TOOLBAR — Search, sort, refresh, run all tests
        ============================================================ */
     function renderToolbar() {
         toolbarEl = document.getElementById('studio-toolbar');
@@ -188,25 +193,19 @@ var Studio = (function () {
         toolbarEl.innerHTML =
             '<div class="toolbar-left">' +
                 '<div class="search-wrap">' +
-                    '<input type="text" class="studio-search" id="studio-search" placeholder="Search games..." />' +
+                    '<input type="text" class="studio-search" id="studio-search" placeholder="Search..." />' +
                 '</div>' +
-                '<select class="studio-select" id="studio-filter-engine">' +
-                    '<option value="all">All Engines</option>' +
-                    '<option value="godot">Godot</option>' +
-                    '<option value="unity">Unity</option>' +
-                    '<option value="html">HTML5</option>' +
-                '</select>' +
                 '<select class="studio-select" id="studio-sort">' +
-                    '<option value="name">Sort: Name</option>' +
-                    '<option value="completion">Sort: Completion</option>' +
-                    '<option value="engine">Sort: Engine</option>' +
-                    '<option value="phase">Sort: Phase</option>' +
+                    '<option value="name">Name</option>' +
+                    '<option value="completion">Completion</option>' +
+                    '<option value="engine">Engine</option>' +
+                    '<option value="phase">Phase</option>' +
                 '</select>' +
                 '<span class="game-count" id="studio-game-count"></span>' +
             '</div>' +
             '<div class="toolbar-right">' +
                 '<button class="toolbar-btn primary" id="studio-run-all-tests" title="Run All Tests">' +
-                    '\u25B6 Run All Tests' +
+                    '\u25B6 Tests' +
                 '</button>' +
                 '<button class="toolbar-btn" id="studio-refresh" title="Refresh">' +
                     '\u21BB' +
@@ -221,18 +220,12 @@ var Studio = (function () {
             searchTimer = setTimeout(function () { renderGameList(); }, 250);
         });
 
-        document.getElementById('studio-filter-engine').addEventListener('change', function (e) {
-            engineFilter = e.target.value;
-            renderGameList();
-        });
-
         document.getElementById('studio-sort').addEventListener('change', function (e) {
             sortBy = e.target.value;
             renderGameList();
         });
 
         document.getElementById('studio-refresh').addEventListener('click', function () {
-            // Clear cache and re-fetch
             try {
                 sessionStorage.removeItem('studio-games');
                 sessionStorage.removeItem('studio-games-ts');
@@ -241,7 +234,6 @@ var Studio = (function () {
         });
 
         document.getElementById('studio-run-all-tests').addEventListener('click', function () {
-            // Stub — wired in Phase 5
             if (typeof TestRunner !== 'undefined') {
                 TestRunner.runAll();
             }
@@ -249,7 +241,66 @@ var Studio = (function () {
     }
 
     /* ============================================================
-       GAME LIST — Filter, sort, render
+       GENRE TABS — Dynamic pill-style filter tabs
+       ============================================================ */
+    function renderGenreTabs() {
+        if (!genreTabsEl) return;
+
+        var html = '';
+        for (var i = 0; i < GENRE_MAP.length; i++) {
+            var g = GENRE_MAP[i];
+            // Count matching games for this genre
+            var count = g.key === 'all' ? games.length : countGenre(g.key);
+            if (g.key !== 'all' && count === 0) continue;
+            var cls = 'genre-tab' + (genreFilter === g.key ? ' active' : '');
+            html += '<button class="' + cls + '" data-genre="' + g.key + '">' +
+                g.label + '</button>';
+        }
+        genreTabsEl.innerHTML = html;
+
+        // Wire up genre tab clicks
+        genreTabsEl.querySelectorAll('.genre-tab').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                genreFilter = tab.dataset.genre;
+                renderGenreTabs();
+                renderGameList();
+                // Re-select first visible game
+                var filtered = getFilteredGames();
+                if (filtered.length > 0) {
+                    var stillVisible = selectedId && filtered.some(function (g) { return g.id === selectedId; });
+                    if (!stillVisible) {
+                        selectGame(filtered[0].id);
+                    }
+                } else {
+                    selectedId = null;
+                    renderDetailPanel();
+                }
+            });
+        });
+    }
+
+    function countGenre(key) {
+        var count = 0;
+        for (var i = 0; i < games.length; i++) {
+            if (matchesGenre(games[i], key)) count++;
+        }
+        return count;
+    }
+
+    function matchesGenre(game, key) {
+        if (key === 'all') return true;
+        var g = game.genre.toLowerCase();
+        switch (key) {
+            case 'rpg': return g.indexOf('rpg') !== -1;
+            case 'action': return g.indexOf('action') !== -1 || g.indexOf('fighter') !== -1 || g.indexOf('platform') !== -1;
+            case 'adventure': return g.indexOf('adventure') !== -1 || g.indexOf('fishing') !== -1;
+            case 'strategy': return g.indexOf('tactics') !== -1 || g.indexOf('defense') !== -1 || g.indexOf('tower') !== -1;
+            default: return true;
+        }
+    }
+
+    /* ============================================================
+       GAME LIST — Filter, sort, render cards in sidebar
        ============================================================ */
     function getFilteredGames() {
         var filtered = games.filter(function (g) {
@@ -264,8 +315,8 @@ var Studio = (function () {
                 if (!match) return false;
             }
 
-            // Engine filter
-            if (engineFilter !== 'all' && g.engineType !== engineFilter) return false;
+            // Genre filter
+            if (genreFilter !== 'all' && !matchesGenre(g, genreFilter)) return false;
 
             return true;
         });
@@ -296,7 +347,7 @@ var Studio = (function () {
         // Update count
         var countEl = document.getElementById('studio-game-count');
         if (countEl) {
-            countEl.textContent = filtered.length + ' of ' + games.length + ' games';
+            countEl.textContent = filtered.length + '/' + games.length;
         }
 
         if (filtered.length === 0) {
@@ -310,179 +361,258 @@ var Studio = (function () {
 
         var html = '';
         for (var i = 0; i < filtered.length; i++) {
-            html += renderRow(filtered[i]);
+            html += renderCard(filtered[i]);
         }
         listEl.innerHTML = html;
 
-        // Wire up row events
-        listEl.querySelectorAll('.studio-row').forEach(function (row) {
-            var gameId = row.dataset.gameId;
-            var game = findGame(gameId);
-            if (!game) return;
-
-            // Click main row to toggle expand
-            row.querySelector('.studio-row-main').addEventListener('click', function (e) {
-                // Don't expand if clicking action buttons
-                if (e.target.closest('.studio-row-actions')) return;
-                toggleExpand(gameId);
+        // Wire up card click events
+        listEl.querySelectorAll('.game-card').forEach(function (card) {
+            card.addEventListener('dblclick', function () {
+                var game = findGame(card.dataset.gameId);
+                if (game) launchGame(game);
             });
+        });
 
-            // Launch button
-            var launchBtn = row.querySelector('.launch-btn');
-            if (launchBtn) {
-                launchBtn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    launchGame(game);
-                });
-            }
-
-            // Run tests button
-            var testBtn = row.querySelector('.test-btn');
-            if (testBtn) {
-                testBtn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    // Stub — wired in Phase 5
-                    if (typeof TestRunner !== 'undefined') {
-                        TestRunner.runForGame(gameId);
-                    }
-                });
-            }
-
-            // Expand button
-            var expandBtn = row.querySelector('.expand-btn');
-            if (expandBtn) {
-                expandBtn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    toggleExpand(gameId);
-                });
-            }
+        // Wire up Play/Info buttons on hover
+        listEl.querySelectorAll('.card-action-btn.play-btn').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var game = findGame(btn.dataset.gameId);
+                if (game) launchGame(game);
+            });
+        });
+        listEl.querySelectorAll('.card-action-btn.info-btn').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                selectGame(btn.dataset.gameId);
+                openDetailPanel();
+            });
         });
     }
 
     /* ============================================================
-       ROW RENDERING
+       CARD RENDERING — Game card in sidebar
        ============================================================ */
-    function renderRow(game) {
-        var isExpanded = expandedId === game.id;
-        var rowClass = 'studio-row' + (isExpanded ? ' expanded' : '');
+    function renderCard(game) {
+        var isSelected = selectedId === game.id;
+        var cls = 'game-card' + (isSelected ? ' selected' : '');
+
+        return '<div class="' + cls + '" data-game-id="' + game.id + '">' +
+            '<div class="game-card-art" style="background: linear-gradient(160deg, ' + game.color + ' 0%, #0a0a1a 80%);">' +
+                '<span>' + game.icon + '</span>' +
+                '<div class="game-card-engine">' + escapeHtml(game.engineType) + '</div>' +
+            '</div>' +
+            '<div class="game-card-info">' +
+                '<div class="game-card-title">' + escapeHtml(game.name) + '</div>' +
+                '<div class="game-card-subtitle">' + escapeHtml(game.genre) + '</div>' +
+                '<div class="game-card-completion">' +
+                    '<div class="game-card-bar"><div class="game-card-bar-fill" style="width:' + game.completion + '%"></div></div>' +
+                    '<span class="game-card-pct">' + game.completion + '%</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="game-card-actions">' +
+                '<button class="card-action-btn play-btn" data-game-id="' + game.id + '">\u25B6 Play</button>' +
+                '<button class="card-action-btn info-btn" data-game-id="' + game.id + '">\u2139 Info</button>' +
+            '</div>' +
+        '</div>';
+    }
+
+    /* ============================================================
+       SELECTION — Click card to select + populate detail panel
+       ============================================================ */
+    function selectGame(gameId) {
+        selectedId = gameId;
+        if (!activeTab[gameId]) activeTab[gameId] = 'overview';
+        highlightSelectedCard();
+        renderDetailPanel();
+    }
+
+    function openDetailPanel() {
+        if (detailEl) {
+            detailEl.classList.remove('hidden');
+            // Trigger reflow for animation
+            detailEl.offsetHeight;
+            detailEl.classList.add('open');
+        }
+    }
+
+    function closeDetailPanel() {
+        if (detailEl) {
+            detailEl.classList.remove('open');
+            setTimeout(function () {
+                if (!detailEl.classList.contains('open')) {
+                    detailEl.classList.add('hidden');
+                }
+            }, 300);
+        }
+        selectedId = null;
+        highlightSelectedCard();
+    }
+
+    function highlightSelectedCard() {
+        var cards = document.querySelectorAll('.game-card');
+        cards.forEach(function (card) {
+            card.classList.toggle('selected', card.dataset.gameId === selectedId);
+        });
+    }
+
+    /* ============================================================
+       DETAIL PANEL — Right column with game info + tabs
+       ============================================================ */
+    function renderDetailPanel() {
+        if (!detailEl) return;
+
+        if (!selectedId) {
+            detailEl.innerHTML =
+                '<div class="detail-empty-state">' +
+                    '<div class="detail-empty-icon">\uD83C\uDFAE</div>' +
+                    '<div class="detail-empty-text">Select a game to view details</div>' +
+                '</div>';
+            return;
+        }
+
+        var game = findGame(selectedId);
+        if (!game) return;
 
         var healthDot = game.health.tests.status || 'gray';
         var healthText = healthDot === 'green' ? 'Pass' :
                          healthDot === 'orange' ? 'Warn' :
                          healthDot === 'red' ? 'Fail' : 'N/A';
 
-        var tagsHtml = '';
-        for (var t = 0; t < game.tags.length && t < 3; t++) {
-            tagsHtml += '<span class="studio-tag">' + escapeHtml(game.tags[t]) + '</span>';
-        }
+        var currentTab = activeTab[game.id] || 'overview';
 
-        return '<div class="' + rowClass + '" data-game-id="' + game.id + '">' +
-            '<div class="studio-row-main">' +
-                // Box art
-                '<div class="studio-row-art" style="background: linear-gradient(135deg, ' + game.color + ', #0a0a1a);">' +
-                    '<span>' + game.icon + '</span>' +
-                '</div>' +
-                // Info
-                '<div class="studio-row-info">' +
-                    '<div class="studio-row-name">' + escapeHtml(game.name) + '</div>' +
-                    '<div class="studio-row-subtitle">' +
+        detailEl.innerHTML =
+            // Close button
+            '<button class="detail-close-btn" id="detail-close-btn">&times;</button>' +
+            // Header banner
+            '<div class="detail-header">' +
+                '<div class="detail-header-bg" style="background: linear-gradient(135deg, ' + game.color + ', #0a0a1a);"></div>' +
+                '<div class="detail-header-icon">' + game.icon + '</div>' +
+                '<div class="detail-header-content">' +
+                    '<div class="detail-header-title">' + escapeHtml(game.name) + '</div>' +
+                    '<div class="detail-header-meta">' +
                         '<span>' + escapeHtml(game.engine) + '</span>' +
                         '<span>\u2022</span>' +
                         '<span>' + escapeHtml(game.genre) + '</span>' +
+                        '<span>\u2022</span>' +
+                        '<span>' + escapeHtml(game.phase) + '</span>' +
                     '</div>' +
-                    '<div class="studio-row-tags">' + tagsHtml + '</div>' +
-                '</div>' +
-                // Metrics
-                '<div class="studio-row-metrics">' +
-                    '<div class="studio-metric">' +
-                        '<span class="studio-metric-label">Phase</span>' +
-                        '<span class="studio-metric-value">' + escapeHtml(game.phase) + '</span>' +
-                    '</div>' +
-                    '<div class="studio-metric">' +
-                        '<span class="studio-metric-label">Complete</span>' +
-                        '<span class="studio-metric-value">' + game.completion + '%</span>' +
-                        '<div class="completion-bar"><div class="completion-fill" style="width:' + game.completion + '%"></div></div>' +
-                    '</div>' +
-                    '<div class="studio-metric">' +
-                        '<span class="studio-metric-label">Version</span>' +
-                        '<span class="studio-metric-value">' + escapeHtml(game.version) + '</span>' +
-                    '</div>' +
-                '</div>' +
-                // Health
-                '<div class="studio-row-health">' +
-                    '<span class="health-dot ' + healthDot + '"></span>' +
-                    '<span class="health-label">' + healthText + '</span>' +
-                '</div>' +
-                // Actions
-                '<div class="studio-row-actions">' +
-                    '<button class="row-action-btn launch-btn" title="Launch">\u25B6</button>' +
-                    '<button class="row-action-btn test-btn" title="Run Tests">\u2714</button>' +
-                    '<button class="row-action-btn expand-btn" title="Details">' + (isExpanded ? '\u25B2' : '\u25BC') + '</button>' +
                 '</div>' +
             '</div>' +
-            // Expandable details
-            '<div class="studio-expand">' +
-                (isExpanded ? renderExpandContent(game) : '') +
+            // Info bar: completion + actions
+            '<div class="detail-info-bar">' +
+                '<div class="detail-completion">' +
+                    '<span class="detail-completion-label">Progress</span>' +
+                    '<div class="detail-completion-bar"><div class="detail-completion-fill" style="width:' + game.completion + '%"></div></div>' +
+                    '<span class="detail-completion-pct">' + game.completion + '%</span>' +
+                '</div>' +
+                '<div class="detail-actions">' +
+                    '<button class="detail-action-btn launch-btn" data-game-id="' + game.id + '">\u25B6 Launch</button>' +
+                    '<button class="detail-action-btn test-btn" data-game-id="' + game.id + '">\u2714 Test</button>' +
+                '</div>' +
             '</div>' +
-        '</div>';
+            // Stats row
+            '<div class="detail-stats">' +
+                '<div class="detail-stat">' +
+                    '<div class="detail-stat-label">Version</div>' +
+                    '<div class="detail-stat-value">' + escapeHtml(game.version) + '</div>' +
+                '</div>' +
+                '<div class="detail-stat">' +
+                    '<div class="detail-stat-label">Health</div>' +
+                    '<div class="detail-stat-value"><span class="health-dot ' + healthDot + '"></span>' + healthText + '</div>' +
+                '</div>' +
+                '<div class="detail-stat">' +
+                    '<div class="detail-stat-label">Last Commit</div>' +
+                    '<div class="detail-stat-value">' + escapeHtml(game.health.lastCommit || 'N/A') + '</div>' +
+                '</div>' +
+                '<div class="detail-stat">' +
+                    '<div class="detail-stat-label">Tags</div>' +
+                    '<div class="detail-stat-value">' + renderTags(game) + '</div>' +
+                '</div>' +
+            '</div>' +
+            // Tabs
+            renderTabBar(game, currentTab) +
+            // Tab content
+            '<div class="studio-tab-content" id="tab-content-' + game.id + '">' +
+                renderTabContent(game, currentTab) +
+            '</div>';
+
+        wireDetailEvents(game);
     }
 
-    /* ============================================================
-       EXPAND / COLLAPSE
-       ============================================================ */
-    function toggleExpand(gameId) {
-        if (expandedId === gameId) {
-            expandedId = null;
-        } else {
-            expandedId = gameId;
-            if (!activeTab[gameId]) activeTab[gameId] = 'overview';
+    function renderTags(game) {
+        var html = '';
+        for (var t = 0; t < game.tags.length && t < 3; t++) {
+            html += '<span class="studio-tag">' + escapeHtml(game.tags[t]) + '</span>';
         }
-        renderGameList();
+        return html || '<span style="color:#605848">None</span>';
     }
 
-    /* ============================================================
-       EXPANDED CONTENT — Tabbed detail panel
-       ============================================================ */
-    function renderExpandContent(game) {
-        var currentTab = activeTab[game.id] || 'overview';
+    function renderTabBar(game, currentTab) {
         var tabs = ['overview', 'commits', 'tests', 'devnotes', 'changelog', 'files'];
         var tabLabels = { overview: 'Overview', commits: 'Commits', tests: 'Tests', devnotes: 'Dev Notes', changelog: 'Changelog', files: 'Files' };
 
-        var tabsHtml = '';
+        var html = '<div class="studio-tabs">';
         for (var i = 0; i < tabs.length; i++) {
             var cls = 'studio-tab' + (tabs[i] === currentTab ? ' active' : '');
-            tabsHtml += '<button class="' + cls + '" data-tab="' + tabs[i] + '" data-game-id="' + game.id + '">' +
+            html += '<button class="' + cls + '" data-tab="' + tabs[i] + '" data-game-id="' + game.id + '">' +
                 tabLabels[tabs[i]] + '</button>';
         }
-
-        var contentHtml = '';
-        switch (currentTab) {
-            case 'overview':
-                contentHtml = renderOverviewTab(game);
-                break;
-            case 'commits':
-                contentHtml = '<div class="stub-message">Commit history will appear here (Phase 2)</div>';
-                break;
-            case 'tests':
-                contentHtml = '<div class="stub-message">Test results will appear here (Phase 5)</div>';
-                break;
-            case 'devnotes':
-                contentHtml = '<div class="detail-notes">' + escapeHtml(game.devNotes || 'No dev notes.') + '</div>';
-                break;
-            case 'changelog':
-                contentHtml = renderChangelogTab(game);
-                break;
-            case 'files':
-                contentHtml = renderFilesTab(game);
-                break;
-        }
-
-        return '<div class="studio-expand-inner">' +
-            '<div class="studio-tabs">' + tabsHtml + '</div>' +
-            '<div class="studio-tab-content" id="tab-content-' + game.id + '">' + contentHtml + '</div>' +
-        '</div>';
+        html += '</div>';
+        return html;
     }
 
+    function renderTabContent(game, tab) {
+        switch (tab) {
+            case 'overview':
+                return renderOverviewTab(game);
+            case 'commits':
+                return '<div class="stub-message">Commit history will appear here</div>';
+            case 'tests':
+                return '<div class="stub-message">Test results will appear here</div>';
+            case 'devnotes':
+                return '<div class="detail-notes">' + escapeHtml(game.devNotes || 'No dev notes.') + '</div>';
+            case 'changelog':
+                return renderChangelogTab(game);
+            case 'files':
+                return renderFilesTab(game);
+            default:
+                return '';
+        }
+    }
+
+    function wireDetailEvents(game) {
+        // Close button
+        var closeBtn = document.getElementById('detail-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function () {
+                closeDetailPanel();
+            });
+        }
+
+        // Launch button
+        var launchBtn = detailEl.querySelector('.detail-action-btn.launch-btn');
+        if (launchBtn) {
+            launchBtn.addEventListener('click', function () {
+                closeDetailPanel();
+                launchGame(game);
+            });
+        }
+
+        // Test button
+        var testBtn = detailEl.querySelector('.detail-action-btn.test-btn');
+        if (testBtn) {
+            testBtn.addEventListener('click', function () {
+                if (typeof TestRunner !== 'undefined') {
+                    TestRunner.runForGame(game.id);
+                }
+            });
+        }
+    }
+
+    /* ============================================================
+       TAB CONTENT RENDERERS
+       ============================================================ */
     function renderOverviewTab(game) {
         return '<div class="detail-overview">' +
             '<div class="detail-card">' +
@@ -539,9 +669,9 @@ var Studio = (function () {
         var html = '<div class="files-list">';
         for (var i = 0; i < files.length; i++) {
             var f = files[i];
-            var path = game.files[f.key];
-            var exists = !!path;
-            html += '<div class="file-link' + (exists ? '' : ' disabled') + '" data-path="' + (path || '') + '">' +
+            var filePath = game.files[f.key];
+            var exists = !!filePath;
+            html += '<div class="file-link' + (exists ? '' : ' disabled') + '" data-path="' + (filePath || '') + '">' +
                 '<span class="file-link-icon">' + f.icon + '</span>' +
                 '<span class="file-link-name">' + f.label + '</span>' +
                 '<span class="file-link-status ' + (exists ? 'exists' : 'missing') + '">' +
@@ -554,7 +684,7 @@ var Studio = (function () {
     }
 
     /* ============================================================
-       EVENT DELEGATION — Tab clicks inside expanded panels
+       EVENT DELEGATION — Tab clicks + file link clicks
        ============================================================ */
     document.addEventListener('click', function (e) {
         var tabBtn = e.target.closest('.studio-tab');
@@ -562,8 +692,7 @@ var Studio = (function () {
             var gameId = tabBtn.dataset.gameId;
             var tab = tabBtn.dataset.tab;
             activeTab[gameId] = tab;
-            // Re-render just the expanded row
-            renderGameList();
+            renderDetailPanel();
         }
 
         // File link clicks -> open preview
@@ -579,7 +708,6 @@ var Studio = (function () {
        GAME LAUNCHING
        ============================================================ */
     function launchGame(game) {
-        // Build a game object compatible with GameView
         var launchData = {
             id: game.id,
             title: game.name,
@@ -629,36 +757,17 @@ var Studio = (function () {
         return null;
     }
 
-    /* Replace games data (used when API is available) */
     function setGames(newGames) {
         games = newGames;
         renderGameList();
     }
 
-    /* Update a game's health indicator */
     function updateGameHealth(gameId, health) {
         var game = findGame(gameId);
         if (game) {
             game.health = health;
-            renderGameList();
+            if (selectedId === gameId) renderDetailPanel();
         }
-    }
-
-    /* ============================================================
-       KEYBOARD FOCUS
-       ============================================================ */
-    function setKeyboardFocus(rows, idx) {
-        rows.forEach(function (r) { r.classList.remove('keyboard-focus'); });
-        if (idx >= 0 && idx < rows.length) {
-            rows[idx].classList.add('keyboard-focus');
-            rows[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }
-    }
-
-    function clearKeyboardFocus() {
-        document.querySelectorAll('.studio-row.keyboard-focus').forEach(function (r) {
-            r.classList.remove('keyboard-focus');
-        });
     }
 
     /* ============================================================
@@ -685,6 +794,7 @@ var Studio = (function () {
         setGames: setGames,
         updateGameHealth: updateGameHealth,
         launchGame: launchGame,
-        renderGameList: renderGameList
+        renderGameList: renderGameList,
+        closeDetailPanel: closeDetailPanel
     };
 })();

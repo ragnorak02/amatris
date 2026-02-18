@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hybrid Knights — Completion Heatmap</title>
+<title>Amatris — Completion Heatmap</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -129,7 +129,7 @@
   <p>Visual overview of project progress</p>
 </header>
 
-<a class="back-link" href="hybrid_knights_portal.html">&larr; Back to Portal</a>
+<a class="back-link" href="amatris%20dashboard.html">&larr; Back to Portal</a>
 
 <div id="summary" class="summary"></div>
 
@@ -162,20 +162,6 @@
 
 <script>
 (function() {
-  const GAMES = [
-    { folder: "Akma", title: "Akma" },
-    { folder: "crystal3d", title: "Hybrid Nights" },
-    { folder: "finalfantasy3d", title: "Korean Fantasy RPG" },
-    { folder: "fishing", title: "Isles of the Blue Current" },
-    { folder: "Hwarang's Path", title: "Hwarang's Path" },
-    { folder: "kingdomDefense", title: "Korean Fantasy TD" },
-    { folder: "mechWar", title: "MechWar" },
-    { folder: "monsterBattle", title: "Monster Catcher" },
-    { folder: "pocketDragon", title: "Dragon League" },
-    { folder: "smashLand", title: "SmashLand" },
-    { folder: "zelda", title: "Zelda" }
-  ];
-
   function getHeatColor(pct) {
     if (pct < 0) return { bg: '#1a1830', text: '#6a6480' };
     if (pct < 25) return { bg: '#7f1d1d', text: '#fca5a5' };
@@ -188,37 +174,21 @@
     const grid = document.getElementById('heatmapGrid');
     const summaryEl = document.getElementById('summary');
 
-    const results = await Promise.all(GAMES.map(async (game) => {
-      let completion = -1;
-      let phase = 'Unknown';
-
-      try {
-        const res = await fetch(game.folder + '/claude.md');
-        if (res.ok) {
-          const text = await res.text();
-          const checked = (text.match(/- \[x\]/gi) || []).length;
-          const total = (text.match(/- \[[ x]\]/gi) || []).length;
-          if (total > 0) {
-            completion = Math.round((checked / total) * 100);
-          } else {
-            completion = 0;
-          }
-          const phaseMatch = text.match(/phase[:\s]+(\d+)/i) || text.match(/## Phase (\d+)/i);
-          if (phaseMatch) phase = 'Phase ' + phaseMatch[1];
-        }
-      } catch(e) {}
-
-      try {
-        const res2 = await fetch(game.folder + '/game_direction.md');
-        if (res2.ok) {
-          const text2 = await res2.text();
-          const phaseMatch2 = text2.match(/phase[:\s]+(\d+)/i) || text2.match(/## Phase (\d+)/i);
-          if (phaseMatch2) phase = 'Phase ' + phaseMatch2[1];
-        }
-      } catch(e) {}
-
-      return { ...game, completion, phase };
-    }));
+    let results = [];
+    try {
+      const res = await fetch('/api/games');
+      if (res.ok) {
+        const games = await res.json();
+        results = games.map(function(g) {
+          return {
+            folder: g.folder,
+            title: g.name,
+            completion: g.completion || 0,
+            phase: g.phase || 'Unknown'
+          };
+        });
+      }
+    } catch(e) { /* API not available */ }
 
     // Summary
     const withData = results.filter(r => r.completion >= 0);
