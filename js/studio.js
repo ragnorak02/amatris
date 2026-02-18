@@ -1,6 +1,6 @@
 /* ============================================================
    studio.js — Studio Dashboard for Amatris
-   Steam-style two-column layout: game list sidebar + detail panel.
+   Sidebar + dense portrait card grid with InputManager wiring.
    ============================================================ */
 
 var Studio = (function () {
@@ -12,22 +12,34 @@ var Studio = (function () {
     var activeTab = {};
     var searchQuery = '';
     var genreFilter = 'all';
+    var engineFilter = 'all';
     var sortBy = 'name';
-    var CACHE_TTL = 30000; // 30s sessionStorage cache
+    var gridFocusIndex = -1;
+    var lastSelectedPerTab = {};
+    var currentNavTab = 'library';
+    var CACHE_TTL = 30000;
     var runningPollTimer = null;
-    var POLL_INTERVAL = 3000; // 3s polling for running games
+    var POLL_INTERVAL = 3000;
 
     /* ---- Genre categories ---- */
     var GENRE_MAP = [
-        { key: 'all', label: 'All' },
-        { key: 'rpg', label: 'RPG' },
-        { key: 'action', label: 'Action' },
-        { key: 'adventure', label: 'Adventure' },
-        { key: 'strategy', label: 'Strategy' }
+        { key: 'all', label: 'All', icon: '\uD83C\uDFAE' },
+        { key: 'rpg', label: 'RPG', icon: '\u2694\uFE0F' },
+        { key: 'action', label: 'Action', icon: '\uD83D\uDCA5' },
+        { key: 'adventure', label: 'Adventure', icon: '\uD83C\uDF0D' },
+        { key: 'strategy', label: 'Strategy', icon: '\uD83C\uDFF0' }
+    ];
+
+    /* ---- Engine categories ---- */
+    var ENGINE_MAP = [
+        { key: 'all', label: 'All', icon: '\uD83D\uDCBB' },
+        { key: 'godot', label: 'Godot', icon: '\uD83D\uDD35' },
+        { key: 'unity', label: 'Unity', icon: '\u26AA' },
+        { key: 'html', label: 'HTML5', icon: '\uD83C\uDF10' }
     ];
 
     /* ---- DOM refs ---- */
-    var viewEl, toolbarEl, listEl, detailEl, genreTabsEl;
+    var viewEl, listEl, detailEl, sidebarFiltersEl;
 
     /* ============================================================
        INIT
@@ -37,7 +49,7 @@ var Studio = (function () {
         if (!viewEl) return;
 
         detailEl = document.getElementById('studio-detail-panel');
-        genreTabsEl = document.getElementById('genre-tabs');
+        sidebarFiltersEl = document.getElementById('sidebar-filters');
 
         renderToolbar();
         fetchGames();
@@ -50,7 +62,7 @@ var Studio = (function () {
             });
         });
 
-        // Keyboard navigation
+        // Keyboard navigation via InputManager
         document.addEventListener('keydown', function (e) {
             if (typeof GameView !== 'undefined' && GameView.isRunning()) return;
             if (typeof FilePreview !== 'undefined' && FilePreview.isOpen()) {
@@ -58,39 +70,89 @@ var Studio = (function () {
                 return;
             }
 
-            var cards = document.querySelectorAll('.game-card');
-            if (cards.length === 0) return;
+            var ctx = InputManager.getContext();
+            if (ctx !== 'launcher' && ctx !== 'detail_panel') return;
 
-            var idx = -1;
-            if (selectedId) {
-                for (var i = 0; i < cards.length; i++) {
-                    if (cards[i].dataset.gameId === selectedId) { idx = i; break; }
-                }
+            // Search focus
+            if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+                e.preventDefault();
+                var searchEl = document.getElementById('studio-search');
+                if (searchEl) searchEl.focus();
+                return;
             }
 
-            if (e.key === 'ArrowDown' || e.key === 'j') {
+            // Don't navigate if typing in search
+            if (document.activeElement.tagName === 'INPUT') return;
+
+            var A = InputManager.ACTIONS;
+
+            switch (e.key) {
+                case 'ArrowUp': case 'k':
+                    e.preventDefault();
+                    InputManager.emit(A.NAV_UP);
+                    break;
+                case 'ArrowDown': case 'j':
+                    e.preventDefault();
+                    InputManager.emit(A.NAV_DOWN);
+                    break;
+                case 'ArrowLeft': case 'h':
+                    e.preventDefault();
+                    InputManager.emit(A.NAV_LEFT);
+                    break;
+                case 'ArrowRight': case 'l':
+                    e.preventDefault();
+                    InputManager.emit(A.NAV_RIGHT);
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    InputManager.emit(A.CONFIRM);
+                    break;
+                case 'Escape':
+                    e.preventDefault();
+                    InputManager.emit(A.BACK);
+                    break;
+                case 'i': case 'I':
+                    if (!e.ctrlKey && !e.metaKey) {
+                        e.preventDefault();
+                        InputManager.emit(A.INFO);
+                    }
+                    break;
+            }
+
+            // Tab switching: Shift+Left/Right
+            if (e.shiftKey && e.key === 'ArrowLeft') {
                 e.preventDefault();
-                idx = idx >= cards.length - 1 ? 0 : idx + 1;
-                selectGame(cards[idx].dataset.gameId);
-                cards[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-            } else if (e.key === 'ArrowUp' || e.key === 'k') {
+                InputManager.emit(A.TAB_PREV);
+            } else if (e.shiftKey && e.key === 'ArrowRight') {
                 e.preventDefault();
-                idx = idx <= 0 ? cards.length - 1 : idx - 1;
-                selectGame(cards[idx].dataset.gameId);
-                cards[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-            } else if (e.key === 'Enter' && selectedId) {
-                e.preventDefault();
-                var game = findGame(selectedId);
-                if (game) launchGame(game);
-            } else if (e.key === 'Escape') {
-                closeDetailPanel();
+                InputManager.emit(A.TAB_NEXT);
             }
         });
+
+        // Subscribe to InputManager actions
+        var A = InputManager.ACTIONS;
+        InputManager.on(A.NAV_UP, function () { navigateGrid('up'); });
+        InputManager.on(A.NAV_DOWN, function () { navigateGrid('down'); });
+        InputManager.on(A.NAV_LEFT, function () { navigateGrid('left'); });
+        InputManager.on(A.NAV_RIGHT, function () { navigateGrid('right'); });
+        InputManager.on(A.CONFIRM, function () {
+            if (selectedId) {
+                var game = findGame(selectedId);
+                if (game) launchGame(game);
+            }
+        });
+        InputManager.on(A.BACK, function () {
+            closeDetailPanel();
+        });
+        InputManager.on(A.INFO, function () {
+            if (selectedId) openDetailPanel();
+        });
+        InputManager.on(A.TAB_PREV, function () { cycleNavTab(-1); });
+        InputManager.on(A.TAB_NEXT, function () { cycleNavTab(1); });
 
         // Start polling for running games
         startRunningPoll();
 
-        // Pause polling when tab is hidden
         document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
                 stopRunningPoll();
@@ -127,7 +189,6 @@ var Studio = (function () {
                     card.classList.toggle('running', isRunning);
                 });
 
-                // Update detail panel launch button if selected game state changed
                 if (selectedId && running.hasOwnProperty(selectedId)) {
                     var btn = detailEl ? detailEl.querySelector('.detail-action-btn.launch-btn') : null;
                     if (btn) {
@@ -142,11 +203,11 @@ var Studio = (function () {
                     }
                 }
             })
-            .catch(function () { /* ignore network errors */ });
+            .catch(function () {});
     }
 
     /* ============================================================
-       FETCH GAMES — From /api/games with sessionStorage cache
+       FETCH GAMES
        ============================================================ */
     function fetchGames(callback) {
         try {
@@ -158,7 +219,7 @@ var Studio = (function () {
                 if (callback) callback();
                 return;
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) {}
 
         fetch('/api/games')
             .then(function (r) { return r.json(); })
@@ -167,7 +228,7 @@ var Studio = (function () {
                 try {
                     sessionStorage.setItem('studio-games', JSON.stringify(games));
                     sessionStorage.setItem('studio-games-ts', String(Date.now()));
-                } catch (e) { /* ignore */ }
+                } catch (e) {}
                 onGamesLoaded();
                 if (callback) callback();
             })
@@ -179,15 +240,15 @@ var Studio = (function () {
     }
 
     function onGamesLoaded() {
-        renderGenreTabs();
+        renderSidebar();
         renderGameList();
     }
 
     /* ============================================================
-       TOOLBAR — Search, sort, refresh, run all tests
+       TOOLBAR
        ============================================================ */
     function renderToolbar() {
-        toolbarEl = document.getElementById('studio-toolbar');
+        var toolbarEl = document.getElementById('studio-toolbar');
         if (!toolbarEl) return;
 
         toolbarEl.innerHTML =
@@ -212,7 +273,6 @@ var Studio = (function () {
                 '</button>' +
             '</div>';
 
-        // Wire up events — debounced search (250ms)
         var searchTimer = null;
         document.getElementById('studio-search').addEventListener('input', function (e) {
             searchQuery = e.target.value.toLowerCase();
@@ -229,7 +289,7 @@ var Studio = (function () {
             try {
                 sessionStorage.removeItem('studio-games');
                 sessionStorage.removeItem('studio-games-ts');
-            } catch (e) { /* ignore */ }
+            } catch (e) {}
             fetchGames();
         });
 
@@ -241,42 +301,97 @@ var Studio = (function () {
     }
 
     /* ============================================================
-       GENRE TABS — Dynamic pill-style filter tabs
+       SIDEBAR — Engine + Genre filter sections
        ============================================================ */
-    function renderGenreTabs() {
-        if (!genreTabsEl) return;
+    function renderSidebar() {
+        if (!sidebarFiltersEl) return;
 
         var html = '';
-        for (var i = 0; i < GENRE_MAP.length; i++) {
-            var g = GENRE_MAP[i];
-            // Count matching games for this genre
-            var count = g.key === 'all' ? games.length : countGenre(g.key);
-            if (g.key !== 'all' && count === 0) continue;
-            var cls = 'genre-tab' + (genreFilter === g.key ? ' active' : '');
-            html += '<button class="' + cls + '" data-genre="' + g.key + '">' +
-                g.label + '</button>';
-        }
-        genreTabsEl.innerHTML = html;
 
-        // Wire up genre tab clicks
-        genreTabsEl.querySelectorAll('.genre-tab').forEach(function (tab) {
-            tab.addEventListener('click', function () {
-                genreFilter = tab.dataset.genre;
-                renderGenreTabs();
+        // Platform section
+        html += '<div class="filter-section" id="filter-platforms">';
+        html += '<div class="filter-section-header" data-section="platforms">';
+        html += '<span class="filter-section-label">Platforms</span>';
+        html += '<span class="filter-section-chevron">\u25BC</span>';
+        html += '</div>';
+        html += '<div class="filter-section-items">';
+        for (var i = 0; i < ENGINE_MAP.length; i++) {
+            var e = ENGINE_MAP[i];
+            var eCount = e.key === 'all' ? games.length : countEngine(e.key);
+            var eCls = 'filter-item' + (engineFilter === e.key ? ' active' : '');
+            html += '<div class="' + eCls + '" data-filter-type="engine" data-filter-key="' + e.key + '">';
+            html += '<span class="filter-item-icon">' + e.icon + '</span>';
+            html += '<span class="filter-item-label">' + e.label + '</span>';
+            html += '<span class="filter-item-count">' + eCount + '</span>';
+            html += '</div>';
+        }
+        html += '</div></div>';
+
+        // Genre section
+        html += '<div class="filter-section" id="filter-genres">';
+        html += '<div class="filter-section-header" data-section="genres">';
+        html += '<span class="filter-section-label">Genres</span>';
+        html += '<span class="filter-section-chevron">\u25BC</span>';
+        html += '</div>';
+        html += '<div class="filter-section-items">';
+        for (var j = 0; j < GENRE_MAP.length; j++) {
+            var g = GENRE_MAP[j];
+            var gCount = g.key === 'all' ? games.length : countGenre(g.key);
+            if (g.key !== 'all' && gCount === 0) continue;
+            var gCls = 'filter-item' + (genreFilter === g.key ? ' active' : '');
+            html += '<div class="' + gCls + '" data-filter-type="genre" data-filter-key="' + g.key + '">';
+            html += '<span class="filter-item-icon">' + g.icon + '</span>';
+            html += '<span class="filter-item-label">' + g.label + '</span>';
+            html += '<span class="filter-item-count">' + gCount + '</span>';
+            html += '</div>';
+        }
+        html += '</div></div>';
+
+        sidebarFiltersEl.innerHTML = html;
+
+        // Wire section collapse
+        sidebarFiltersEl.querySelectorAll('.filter-section-header').forEach(function (header) {
+            header.addEventListener('click', function () {
+                header.parentElement.classList.toggle('collapsed');
+            });
+        });
+
+        // Wire filter clicks
+        sidebarFiltersEl.querySelectorAll('.filter-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                var type = item.dataset.filterType;
+                var key = item.dataset.filterKey;
+                if (type === 'engine') {
+                    engineFilter = key;
+                } else if (type === 'genre') {
+                    genreFilter = key;
+                }
+                renderSidebar();
                 renderGameList();
-                // Re-select first visible game
+
+                // Keep selection if still visible
                 var filtered = getFilteredGames();
                 if (filtered.length > 0) {
                     var stillVisible = selectedId && filtered.some(function (g) { return g.id === selectedId; });
                     if (!stillVisible) {
                         selectGame(filtered[0].id);
+                        gridFocusIndex = 0;
                     }
                 } else {
                     selectedId = null;
-                    renderDetailPanel();
+                    gridFocusIndex = -1;
+                    updateSelectionClasses();
                 }
             });
         });
+    }
+
+    function countEngine(key) {
+        var count = 0;
+        for (var i = 0; i < games.length; i++) {
+            if (games[i].engineType === key) count++;
+        }
+        return count;
     }
 
     function countGenre(key) {
@@ -300,7 +415,7 @@ var Studio = (function () {
     }
 
     /* ============================================================
-       GAME LIST — Filter, sort, render cards in sidebar
+       GAME LIST — Filter, sort, render cards
        ============================================================ */
     function getFilteredGames() {
         var filtered = games.filter(function (g) {
@@ -314,6 +429,9 @@ var Studio = (function () {
                     g.tags.some(function (t) { return t.toLowerCase().indexOf(q) !== -1; });
                 if (!match) return false;
             }
+
+            // Engine filter
+            if (engineFilter !== 'all' && g.engineType !== engineFilter) return false;
 
             // Genre filter
             if (genreFilter !== 'all' && !matchesGenre(g, genreFilter)) return false;
@@ -330,7 +448,7 @@ var Studio = (function () {
                     return a.engine.localeCompare(b.engine);
                 case 'phase':
                     return a.phase.localeCompare(b.phase);
-                default: // name
+                default:
                     return a.name.localeCompare(b.name);
             }
         });
@@ -356,6 +474,7 @@ var Studio = (function () {
                     '<div class="studio-empty-icon">\uD83D\uDD0D</div>' +
                     '<div class="studio-empty-text">No games match your search</div>' +
                 '</div>';
+            listEl.classList.remove('has-selection');
             return;
         }
 
@@ -367,13 +486,24 @@ var Studio = (function () {
 
         // Wire up card click events
         listEl.querySelectorAll('.game-card').forEach(function (card) {
+            card.addEventListener('click', function () {
+                selectGame(card.dataset.gameId);
+                // Update gridFocusIndex to match
+                var cards = document.querySelectorAll('.game-card');
+                for (var ci = 0; ci < cards.length; ci++) {
+                    if (cards[ci].dataset.gameId === card.dataset.gameId) {
+                        gridFocusIndex = ci;
+                        break;
+                    }
+                }
+            });
             card.addEventListener('dblclick', function () {
                 var game = findGame(card.dataset.gameId);
                 if (game) launchGame(game);
             });
         });
 
-        // Wire up Play/Info buttons on hover
+        // Wire up Play/Info buttons
         listEl.querySelectorAll('.card-action-btn.play-btn').forEach(function (btn) {
             btn.addEventListener('click', function (e) {
                 e.stopPropagation();
@@ -388,10 +518,12 @@ var Studio = (function () {
                 openDetailPanel();
             });
         });
+
+        updateSelectionClasses();
     }
 
     /* ============================================================
-       CARD RENDERING — Game card in sidebar
+       CARD RENDERING
        ============================================================ */
     function renderCard(game) {
         var isSelected = selectedId === game.id;
@@ -401,6 +533,10 @@ var Studio = (function () {
             '<div class="game-card-art" style="background: linear-gradient(160deg, ' + game.color + ' 0%, #0a0a1a 80%);">' +
                 '<span>' + game.icon + '</span>' +
                 '<div class="game-card-engine">' + escapeHtml(game.engineType) + '</div>' +
+                '<div class="game-card-actions">' +
+                    '<button class="card-action-btn play-btn" data-game-id="' + game.id + '">\u25B6</button>' +
+                    '<button class="card-action-btn info-btn" data-game-id="' + game.id + '">\u2139</button>' +
+                '</div>' +
             '</div>' +
             '<div class="game-card-info">' +
                 '<div class="game-card-title">' + escapeHtml(game.name) + '</div>' +
@@ -410,54 +546,192 @@ var Studio = (function () {
                     '<span class="game-card-pct">' + game.completion + '%</span>' +
                 '</div>' +
             '</div>' +
-            '<div class="game-card-actions">' +
-                '<button class="card-action-btn play-btn" data-game-id="' + game.id + '">\u25B6 Play</button>' +
-                '<button class="card-action-btn info-btn" data-game-id="' + game.id + '">\u2139 Info</button>' +
-            '</div>' +
         '</div>';
     }
 
     /* ============================================================
-       SELECTION — Click card to select + populate detail panel
+       GRID NAVIGATION — 2D with wrap-around
+       ============================================================ */
+    function navigateGrid(direction) {
+        var cards = document.querySelectorAll('.game-card');
+        if (cards.length === 0) return;
+
+        var cols = getGridColumns();
+
+        if (gridFocusIndex < 0) {
+            gridFocusIndex = 0;
+        } else {
+            var col = gridFocusIndex % cols;
+            var row = Math.floor(gridFocusIndex / cols);
+            var totalRows = Math.ceil(cards.length / cols);
+
+            switch (direction) {
+                case 'right':
+                    gridFocusIndex++;
+                    if (gridFocusIndex >= cards.length) gridFocusIndex = 0;
+                    break;
+                case 'left':
+                    gridFocusIndex--;
+                    if (gridFocusIndex < 0) gridFocusIndex = cards.length - 1;
+                    break;
+                case 'down':
+                    var downIdx = gridFocusIndex + cols;
+                    if (downIdx >= cards.length) {
+                        // Wrap to top of same column
+                        gridFocusIndex = col < cards.length ? col : 0;
+                    } else {
+                        gridFocusIndex = downIdx;
+                    }
+                    break;
+                case 'up':
+                    var upIdx = gridFocusIndex - cols;
+                    if (upIdx < 0) {
+                        // Wrap to bottom of same column
+                        var lastRowStart = (totalRows - 1) * cols;
+                        var target = lastRowStart + col;
+                        gridFocusIndex = target < cards.length ? target : cards.length - 1;
+                    } else {
+                        gridFocusIndex = upIdx;
+                    }
+                    break;
+            }
+        }
+
+        setGridFocus(gridFocusIndex);
+    }
+
+    function setGridFocus(index) {
+        var cards = document.querySelectorAll('.game-card');
+        if (index < 0 || index >= cards.length) return;
+
+        gridFocusIndex = index;
+        var gameId = cards[index].dataset.gameId;
+        selectGame(gameId);
+
+        // Scroll into view
+        cards[index].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function getGridColumns() {
+        var list = document.getElementById('studio-game-list');
+        if (!list) return 4;
+        var style = window.getComputedStyle(list);
+        var cols = style.getPropertyValue('grid-template-columns').split(' ').length;
+        return cols || 4;
+    }
+
+    /* ============================================================
+       TAB SWITCHING — LB/RB cycle through nav tabs
+       ============================================================ */
+    function cycleNavTab(dir) {
+        var tabs = document.querySelectorAll('.menu-tab');
+        if (tabs.length === 0) return;
+
+        // Save current selection
+        lastSelectedPerTab[currentNavTab] = selectedId;
+
+        var currentIdx = -1;
+        for (var i = 0; i < tabs.length; i++) {
+            if (tabs[i].classList.contains('active')) {
+                currentIdx = i;
+                break;
+            }
+        }
+
+        // Remove gamepad-focus from all
+        tabs.forEach(function (t) { t.classList.remove('gamepad-focus'); });
+
+        var newIdx = currentIdx + dir;
+        if (newIdx < 0) newIdx = tabs.length - 1;
+        if (newIdx >= tabs.length) newIdx = 0;
+
+        switchNavTab(tabs[newIdx].dataset.tab);
+    }
+
+    function switchNavTab(tabName) {
+        // Save current
+        lastSelectedPerTab[currentNavTab] = selectedId;
+
+        var tabs = document.querySelectorAll('.menu-tab');
+        tabs.forEach(function (t) {
+            t.classList.remove('active');
+            t.classList.remove('gamepad-focus');
+            if (t.dataset.tab === tabName) {
+                t.classList.add('active');
+                t.classList.add('gamepad-focus');
+            }
+        });
+
+        currentNavTab = tabName;
+
+        // Restore selection
+        if (lastSelectedPerTab[tabName]) {
+            var restored = lastSelectedPerTab[tabName];
+            var filtered = getFilteredGames();
+            var found = filtered.some(function (g) { return g.id === restored; });
+            if (found) {
+                selectGame(restored);
+                // Find grid index
+                var cards = document.querySelectorAll('.game-card');
+                for (var i = 0; i < cards.length; i++) {
+                    if (cards[i].dataset.gameId === restored) {
+                        gridFocusIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /* ============================================================
+       SELECTION
        ============================================================ */
     function selectGame(gameId) {
         selectedId = gameId;
         if (!activeTab[gameId]) activeTab[gameId] = 'overview';
-        highlightSelectedCard();
+        updateSelectionClasses();
         renderDetailPanel();
+    }
+
+    function updateSelectionClasses() {
+        var cards = document.querySelectorAll('.game-card');
+        var hasSelection = !!selectedId;
+
+        cards.forEach(function (card) {
+            card.classList.toggle('selected', card.dataset.gameId === selectedId);
+        });
+
+        var list = document.getElementById('studio-game-list');
+        if (list) {
+            list.classList.toggle('has-selection', hasSelection);
+        }
     }
 
     function openDetailPanel() {
         if (detailEl) {
             detailEl.classList.remove('hidden');
-            // Trigger reflow for animation
-            detailEl.offsetHeight;
+            detailEl.offsetHeight; // Trigger reflow
             detailEl.classList.add('open');
+            InputManager.pushContext('detail_panel');
         }
     }
 
     function closeDetailPanel() {
-        if (detailEl) {
+        if (detailEl && detailEl.classList.contains('open')) {
             detailEl.classList.remove('open');
             setTimeout(function () {
                 if (!detailEl.classList.contains('open')) {
                     detailEl.classList.add('hidden');
                 }
             }, 300);
+            if (InputManager.getContext() === 'detail_panel') {
+                InputManager.popContext();
+            }
         }
-        selectedId = null;
-        highlightSelectedCard();
-    }
-
-    function highlightSelectedCard() {
-        var cards = document.querySelectorAll('.game-card');
-        cards.forEach(function (card) {
-            card.classList.toggle('selected', card.dataset.gameId === selectedId);
-        });
     }
 
     /* ============================================================
-       DETAIL PANEL — Right column with game info + tabs
+       DETAIL PANEL
        ============================================================ */
     function renderDetailPanel() {
         if (!detailEl) return;
@@ -482,9 +756,7 @@ var Studio = (function () {
         var currentTab = activeTab[game.id] || 'overview';
 
         detailEl.innerHTML =
-            // Close button
             '<button class="detail-close-btn" id="detail-close-btn">&times;</button>' +
-            // Header banner
             '<div class="detail-header">' +
                 '<div class="detail-header-bg" style="background: linear-gradient(135deg, ' + game.color + ', #0a0a1a);"></div>' +
                 '<div class="detail-header-icon">' + game.icon + '</div>' +
@@ -499,7 +771,6 @@ var Studio = (function () {
                     '</div>' +
                 '</div>' +
             '</div>' +
-            // Info bar: completion + actions
             '<div class="detail-info-bar">' +
                 '<div class="detail-completion">' +
                     '<span class="detail-completion-label">Progress</span>' +
@@ -511,7 +782,6 @@ var Studio = (function () {
                     '<button class="detail-action-btn test-btn" data-game-id="' + game.id + '">\u2714 Test</button>' +
                 '</div>' +
             '</div>' +
-            // Stats row
             '<div class="detail-stats">' +
                 '<div class="detail-stat">' +
                     '<div class="detail-stat-label">Version</div>' +
@@ -530,9 +800,7 @@ var Studio = (function () {
                     '<div class="detail-stat-value">' + renderTags(game) + '</div>' +
                 '</div>' +
             '</div>' +
-            // Tabs
             renderTabBar(game, currentTab) +
-            // Tab content
             '<div class="studio-tab-content" id="tab-content-' + game.id + '">' +
                 renderTabContent(game, currentTab) +
             '</div>';
@@ -582,7 +850,6 @@ var Studio = (function () {
     }
 
     function wireDetailEvents(game) {
-        // Close button
         var closeBtn = document.getElementById('detail-close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', function () {
@@ -590,7 +857,6 @@ var Studio = (function () {
             });
         }
 
-        // Launch button
         var launchBtn = detailEl.querySelector('.detail-action-btn.launch-btn');
         if (launchBtn) {
             launchBtn.addEventListener('click', function () {
@@ -599,7 +865,6 @@ var Studio = (function () {
             });
         }
 
-        // Test button
         var testBtn = detailEl.querySelector('.detail-action-btn.test-btn');
         if (testBtn) {
             testBtn.addEventListener('click', function () {
@@ -695,7 +960,6 @@ var Studio = (function () {
             renderDetailPanel();
         }
 
-        // File link clicks -> open preview
         var fileLink = e.target.closest('.file-link');
         if (fileLink && fileLink.dataset.path && !fileLink.classList.contains('disabled')) {
             if (typeof FilePreview !== 'undefined') {
@@ -716,7 +980,6 @@ var Studio = (function () {
             subtitle: game.genre
         };
 
-        // Show launch animation
         var launchEl = document.createElement('div');
         launchEl.className = 'launch-overlay';
         launchEl.innerHTML =
@@ -736,7 +999,7 @@ var Studio = (function () {
     }
 
     /* ============================================================
-       SHOW / HIDE — Called when game view opens/closes
+       SHOW / HIDE
        ============================================================ */
     function show() {
         if (viewEl) viewEl.classList.remove('hidden');
@@ -795,6 +1058,12 @@ var Studio = (function () {
         updateGameHealth: updateGameHealth,
         launchGame: launchGame,
         renderGameList: renderGameList,
-        closeDetailPanel: closeDetailPanel
+        closeDetailPanel: closeDetailPanel,
+        navigateGrid: navigateGrid,
+        setGridFocus: setGridFocus,
+        getGridFocusIndex: function () { return gridFocusIndex; },
+        getGridColumns: getGridColumns,
+        switchNavTab: switchNavTab,
+        getFilteredGames: getFilteredGames
     };
 })();

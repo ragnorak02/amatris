@@ -161,6 +161,8 @@ const Overlay = (() => {
         if (isOpen) return;
         isOpen = true;
 
+        if (typeof InputManager !== 'undefined') InputManager.pushContext('overlay');
+
         const overlay = document.getElementById('overlay');
         overlay.classList.remove('hidden');
 
@@ -186,6 +188,10 @@ const Overlay = (() => {
     function close() {
         if (!isOpen) return;
         isOpen = false;
+
+        if (typeof InputManager !== 'undefined' && InputManager.getContext() === 'overlay') {
+            InputManager.popContext();
+        }
 
         const overlay = document.getElementById('overlay');
         overlay.classList.remove('visible');

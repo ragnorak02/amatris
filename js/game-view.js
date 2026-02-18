@@ -16,6 +16,9 @@ var GameView = (function () {
     function launch(game) {
         currentGame = game;
 
+        // Push gameplay context
+        if (typeof InputManager !== 'undefined') InputManager.pushContext('gameplay');
+
         // Hide launcher UI
         document.getElementById('portal-header').classList.add('hidden');
         document.getElementById('studio-view').classList.add('hidden');
@@ -68,6 +71,14 @@ var GameView = (function () {
 
     /* Close the game and return to the Studio dashboard */
     function close() {
+        // Pop back to launcher context
+        if (typeof InputManager !== 'undefined') {
+            // Pop until we're back to launcher
+            while (InputManager.getContext() !== 'launcher') {
+                InputManager.popContext();
+            }
+        }
+
         var wasGame = currentGame;
         currentGame = null;
         isEmbedded = false;

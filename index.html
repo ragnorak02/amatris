@@ -12,8 +12,28 @@
     <!-- Starry night background layers -->
     <div id="bg-stars" class="bg-layer"></div>
     <div id="bg-clouds" class="bg-layer"></div>
-    <div id="bg-moon">
-        <div id="moon-clouds"></div>
+    <div id="logo-icon" title="Amatris">
+        <svg id="wolf-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <!-- Wolf head silhouette -->
+            <path d="M50 8 L35 28 L20 18 L28 42 L18 52 L32 54 L30 70 L42 62 L50 75 L58 62 L70 70 L68 54 L82 52 L72 42 L80 18 L65 28 L50 8Z" fill="#d4af37" opacity="0.95"/>
+            <!-- Flame mane left -->
+            <path class="flame-path" d="M25 30 Q20 20 28 15 Q24 25 30 28Z" fill="#f0c850" opacity="0.8" style="animation-delay: 0s"/>
+            <path class="flame-path" d="M22 38 Q15 28 20 20 Q18 32 26 36Z" fill="#f0c850" opacity="0.7" style="animation-delay: 0.3s"/>
+            <!-- Flame mane right -->
+            <path class="flame-path" d="M75 30 Q80 20 72 15 Q76 25 70 28Z" fill="#f0c850" opacity="0.8" style="animation-delay: 0.6s"/>
+            <path class="flame-path" d="M78 38 Q85 28 80 20 Q82 32 74 36Z" fill="#f0c850" opacity="0.7" style="animation-delay: 0.9s"/>
+            <!-- Flame top -->
+            <path class="flame-path" d="M50 8 Q45 -2 50 -5 Q55 -2 50 8Z" fill="#f0c850" opacity="0.75" style="animation-delay: 0.15s"/>
+            <path class="flame-path" d="M42 14 Q38 4 44 0 Q40 10 45 14Z" fill="#f0c850" opacity="0.6" style="animation-delay: 0.45s"/>
+            <path class="flame-path" d="M58 14 Q62 4 56 0 Q60 10 55 14Z" fill="#f0c850" opacity="0.6" style="animation-delay: 0.75s"/>
+            <!-- Eyes -->
+            <circle cx="40" cy="42" r="3" fill="#ff6030" opacity="0.95"/>
+            <circle cx="60" cy="42" r="3" fill="#ff6030" opacity="0.95"/>
+            <circle cx="40" cy="41.5" r="1.2" fill="#fff" opacity="0.9"/>
+            <circle cx="60" cy="41.5" r="1.2" fill="#fff" opacity="0.9"/>
+            <!-- Snout -->
+            <path d="M45 52 L50 58 L55 52" fill="none" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
     </div>
 
     <!-- Header -->
@@ -36,9 +56,14 @@
 
     <!-- Studio Dashboard -->
     <div id="studio-view">
-        <div id="studio-toolbar"></div>
-        <div id="genre-tabs"></div>
-        <div id="studio-game-list"></div>
+        <aside id="studio-sidebar">
+            <div id="sidebar-header"><span class="sidebar-title">LIBRARY</span></div>
+            <div id="sidebar-filters"><!-- Rendered by studio.js --></div>
+        </aside>
+        <div id="studio-main">
+            <div id="studio-toolbar"></div>
+            <div id="studio-game-list"></div>
+        </div>
     </div>
 
     <!-- Detail panel overlay (shown when a game is selected) -->
@@ -149,6 +174,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="js/input-manager.js"></script>
     <script src="js/game-view.js"></script>
     <script src="js/overlay.js"></script>
     <script src="js/studio.js"></script>

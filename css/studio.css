@@ -1,19 +1,160 @@
 /* ============================================================
    Studio Dashboard Styles — Amatris
-   Steam-style library grid of portrait game art cards.
+   Sidebar + dense portrait card grid layout.
    ============================================================ */
 
 /* ============================================================
-   STUDIO VIEW — Full-screen grid layout
+   STUDIO VIEW — Sidebar + main grid layout
    ============================================================ */
 #studio-view {
     position: relative;
     z-index: 10;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    height: calc(100vh - 90px);
+    overflow: hidden;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+#studio-sidebar {
+    background: rgba(8, 8, 20, 0.65);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 90px);
-    padding: 0 24px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#studio-sidebar::-webkit-scrollbar { width: 4px; }
+#studio-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(240, 200, 80, 0.15);
+    border-radius: 2px;
+}
+
+#sidebar-header {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    flex-shrink: 0;
+}
+
+.sidebar-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #f0c850;
+}
+
+#sidebar-filters {
+    padding: 8px 0;
+    flex: 1;
+}
+
+/* Filter section headers */
+.filter-section {
+    margin-bottom: 4px;
+}
+
+.filter-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+    user-select: none;
+}
+
+.filter-section-header:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.filter-section-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #605848;
+}
+
+.filter-section-chevron {
+    font-size: 0.5rem;
+    color: #605848;
+    transition: transform 0.2s;
+}
+
+.filter-section.collapsed .filter-section-chevron {
+    transform: rotate(-90deg);
+}
+
+.filter-section.collapsed .filter-section-items {
+    display: none;
+}
+
+/* Filter items */
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px 6px 24px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 0.75rem;
+    color: #807860;
+}
+
+.filter-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+    color: #c8c0b0;
+}
+
+.filter-item.active {
+    color: #f0c850;
+    background: rgba(240, 200, 80, 0.06);
+}
+
+.filter-item.gamepad-focus {
+    color: #f0c850;
+    background: rgba(240, 200, 80, 0.1);
+    box-shadow: inset 2px 0 0 #f0c850;
+}
+
+.filter-item-icon {
+    width: 16px;
+    text-align: center;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.filter-item-label {
+    flex: 1;
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filter-item-count {
+    font-size: 0.6rem;
+    color: #504840;
+    font-variant-numeric: tabular-nums;
+    min-width: 16px;
+    text-align: right;
+}
+
+.filter-item.active .filter-item-count {
+    color: rgba(240, 200, 80, 0.6);
+}
+
+/* ============================================================
+   STUDIO MAIN — Toolbar + game grid
+   ============================================================ */
+#studio-main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 20px;
 }
 
 /* ============================================================
@@ -139,56 +280,30 @@
 }
 
 /* ============================================================
-   GENRE TABS — Pill-style filter tabs
-   ============================================================ */
-#genre-tabs {
-    display: flex;
-    gap: 6px;
-    padding: 10px 0;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.genre-tab {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #807860;
-    padding: 5px 14px;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    font-family: inherit;
-    white-space: nowrap;
-}
-
-.genre-tab:hover {
-    color: #c8c0b0;
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-.genre-tab.active {
-    color: #f0c850;
-    background: rgba(240, 200, 80, 0.1);
-    border-color: rgba(240, 200, 80, 0.3);
-}
-
-/* ============================================================
-   GAME GRID — Portrait cover art cards filling the viewport
+   GAME GRID — Responsive portrait card grid
    ============================================================ */
 #studio-game-list {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: minmax(250px, 1fr);
-    gap: 14px;
-    padding: 14px 0 14px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    padding: 14px 0;
     overflow-y: auto;
     overflow-x: hidden;
+    align-content: start;
+}
+
+#studio-game-list::-webkit-scrollbar { width: 6px; }
+#studio-game-list::-webkit-scrollbar-track { background: transparent; }
+#studio-game-list::-webkit-scrollbar-thumb {
+    background: rgba(240, 200, 80, 0.15);
+    border-radius: 3px;
+}
+
+/* Dim unselected cards when one is focused */
+#studio-game-list.has-selection .game-card:not(.selected) {
+    opacity: 0.8;
+    filter: brightness(0.85);
 }
 
 /* ============================================================
@@ -198,24 +313,27 @@
     position: relative;
     border-radius: 10px;
     cursor: pointer;
-    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s, filter 0.2s;
     border: 2px solid rgba(255, 255, 255, 0.06);
     overflow: hidden;
     display: flex;
     flex-direction: column;
     background: #0c0c1a;
+    aspect-ratio: 3 / 4;
 }
 
 .game-card:hover {
-    transform: translateY(-4px) scale(1.02);
+    transform: scale(1.05);
     border-color: rgba(240, 200, 80, 0.4);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(240, 200, 80, 0.08);
     z-index: 2;
 }
 
 .game-card.selected {
-    border-color: rgba(240, 200, 80, 0.6);
-    box-shadow: 0 0 20px rgba(240, 200, 80, 0.15);
+    transform: scale(1.05);
+    border-color: rgba(240, 200, 80, 0.7);
+    box-shadow: 0 0 24px rgba(240, 200, 80, 0.2), 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 3;
 }
 
 /* Cover art area */
@@ -224,7 +342,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 4.5rem;
+    font-size: 3.5rem;
     position: relative;
     min-height: 0;
 }
@@ -233,17 +351,18 @@
     transition: transform 0.3s ease;
 }
 
-/* Animate icon on hover or gamepad focus */
+/* Animate icon on hover or selected */
 .game-card:hover .game-card-art > span,
+.game-card.selected .game-card-art > span,
 .game-card.gamepad-focus .game-card-art > span {
     animation: iconBounce 0.8s ease-in-out infinite;
 }
 
 @keyframes iconBounce {
     0%, 100% { transform: translateY(0) scale(1); }
-    25% { transform: translateY(-8px) scale(1.1); }
+    25% { transform: translateY(-6px) scale(1.08); }
     50% { transform: translateY(0) scale(1); }
-    75% { transform: translateY(-4px) scale(1.05); }
+    75% { transform: translateY(-3px) scale(1.04); }
 }
 
 /* Engine badge on card */
@@ -263,67 +382,7 @@
     z-index: 3;
 }
 
-/* Bottom info overlay on card */
-.game-card-info {
-    padding: 14px 16px;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-}
-
-.game-card-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #e0dcd0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: 0.02em;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-}
-
-.game-card-subtitle {
-    font-size: 0.75rem;
-    color: #807860;
-    margin-top: 3px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.game-card-completion {
-    margin-top: 6px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.game-card-bar {
-    flex: 1;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.game-card-bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    background: linear-gradient(90deg, #f0c850, #e6a020);
-    transition: width 0.5s ease;
-}
-
-.game-card-pct {
-    font-size: 0.58rem;
-    color: #a09880;
-    font-variant-numeric: tabular-nums;
-    min-width: 28px;
-    text-align: right;
-}
-
-/* Action buttons — top-right corner, always visible */
+/* Action buttons — top-right corner, hidden until hover/focus */
 .game-card-actions {
     position: absolute;
     top: 8px;
@@ -331,18 +390,20 @@
     display: flex;
     gap: 6px;
     z-index: 3;
+    opacity: 0;
+    transition: opacity 0.15s;
 }
 
-.card-action-btn.gamepad-focus {
-    outline: 2px solid #f0c850;
-    outline-offset: 2px;
-    transform: scale(1.1);
+.game-card:hover .game-card-actions,
+.game-card.selected .game-card-actions,
+.game-card.gamepad-focus .game-card-actions {
+    opacity: 1;
 }
 
 .card-action-btn {
-    padding: 6px 12px;
+    padding: 5px 10px;
     border-radius: 6px;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
     font-family: inherit;
     cursor: pointer;
@@ -376,8 +437,74 @@
     color: #fff;
 }
 
+.card-action-btn.gamepad-focus {
+    outline: 2px solid #f0c850;
+    outline-offset: 2px;
+    transform: scale(1.1);
+}
+
+/* Bottom info overlay on card */
+.game-card-info {
+    padding: 10px 12px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.game-card-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #e0dcd0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.02em;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.game-card-subtitle {
+    font-size: 0.65rem;
+    color: #807860;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.game-card-completion {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.game-card-bar {
+    flex: 1;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 1px;
+    overflow: hidden;
+}
+
+.game-card-bar-fill {
+    height: 100%;
+    border-radius: 1px;
+    background: linear-gradient(90deg, #f0c850, #e6a020);
+    transition: width 0.5s ease;
+}
+
+.game-card-pct {
+    font-size: 0.55rem;
+    color: #a09880;
+    font-variant-numeric: tabular-nums;
+    min-width: 24px;
+    text-align: right;
+}
+
 /* ============================================================
-   RUNNING STATE — Green glow on card when game is running
+   RUNNING STATE — Green glow on card
    ============================================================ */
 .game-card.running {
     border-color: rgba(76, 175, 80, 0.5);
@@ -387,19 +514,21 @@
 .game-card.running::after {
     content: 'RUNNING';
     position: absolute;
-    top: 8px;
-    left: 8px;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
     font-size: 0.55rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    padding: 3px 8px;
+    padding: 3px 10px;
     border-radius: 4px;
     background: rgba(76, 175, 80, 0.25);
     color: #4caf50;
     border: 1px solid rgba(76, 175, 80, 0.4);
     z-index: 3;
     animation: pulse 2s ease-in-out infinite;
+    white-space: nowrap;
 }
 
 @keyframes pulse {
@@ -412,9 +541,10 @@
    ============================================================ */
 .game-card.gamepad-focus,
 .game-card.keyboard-focus {
-    border-color: rgba(240, 200, 80, 0.5);
-    box-shadow: 0 0 20px rgba(240, 200, 80, 0.15);
-    transform: translateY(-4px) scale(1.02);
+    transform: scale(1.05);
+    border-color: rgba(240, 200, 80, 0.7);
+    box-shadow: 0 0 24px rgba(240, 200, 80, 0.2), 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 3;
 }
 
 /* ============================================================
@@ -1030,10 +1160,20 @@ h4.md-h, h5.md-h, h6.md-h { font-size: 0.85rem; }
 .md-hr { border: none; border-top: 1px solid rgba(255, 255, 255, 0.06); margin: 12px 0; }
 
 /* ============================================================
-   RESPONSIVE
+   RESPONSIVE — Hide sidebar on narrow screens
    ============================================================ */
 @media (max-width: 900px) {
-    #studio-view { padding: 0 12px; }
+    #studio-view {
+        grid-template-columns: 1fr;
+    }
+
+    #studio-sidebar {
+        display: none;
+    }
+
+    #studio-main {
+        padding: 0 12px;
+    }
 
     #studio-game-list {
         grid-template-columns: 1fr;

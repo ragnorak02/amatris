@@ -1,37 +1,43 @@
 # Amatris — Studio OS
 
 ## Project Overview
-This is a game development portfolio containing a **web-based Studio OS launcher** and **11 game projects** across multiple engines. The launcher serves as a data-dense development dashboard for browsing, launching, testing, and managing all games.
+This is a game development portfolio containing a **web-based Studio OS launcher** and **11+ game projects** across multiple engines. The launcher serves as a data-dense development dashboard for browsing, launching, testing, and managing all games.
 
-## Launcher (`Z:/Development/launcher/`)
+## Launcher (`Z:/Development/amatris/`)
 
 ### Running
 ```
-cd Z:/Development/launcher
+cd Z:/Development/amatris
 node server.js          → http://localhost:3000  (launcher + all games)
 ```
 
-Game projects live at `Z:/Development/Games/` (sibling directory). The server serves launcher UI from its own directory and game assets from `../Games/`.
+Game projects live as subdirectories alongside the launcher files. The server auto-discovers game folders containing `game.config.json`, `claude.md`, or `project.godot`.
 
 ### Key Files
 | File | Purpose |
 |------|---------|
-| `index.html` | Main HTML (header, nav, studio dashboard, game-view, overlay) |
+| `index.html` | Main HTML — header, nav tabs, sidebar + grid studio layout, game-view, overlay, fire-wolf SVG logo |
 | `server.js` | Node HTTP server — static files + REST API (games, launch, tests, files) |
-| `js/studio.js` | Studio dashboard — vertical game list, filtering, sorting, expandable rows |
-| `js/game-view.js` | Game launch/close — iframe embed (HTML games) or external window (Godot) |
-| `js/overlay.js` | Shift+Tab overlay during gameplay (menu, performance, shortcuts, test runner) |
+| `js/input-manager.js` | **Input abstraction layer** — semantic action pub/sub bus + context stack |
+| `js/studio.js` | Studio dashboard — sidebar filters, dense portrait card grid, InputManager wiring, tab memory |
+| `js/game-view.js` | Game launch/close — iframe embed (HTML) or external window (Godot), pushes/pops InputManager context |
+| `js/overlay.js` | Shift+Tab overlay during gameplay (menu, performance, shortcuts), pushes/pops overlay context |
 | `js/file-preview.js` | Side-panel file preview with markdown rendering |
 | `js/test-runner.js` | Test execution module — per-game and run-all tests via server API |
-| `js/background.js` | Starry night background — stars, clouds, moon |
-| `js/gamepad.js` | Xbox controller support (D-pad row navigation, A=launch, X=test) |
-| `js/main.js` | Entry point — initializes all modules |
-| `css/style.css` | Core launcher styles (header, nav, background, game-view) |
-| `css/studio.css` | Studio dashboard + file preview panel styles |
+| `js/background.js` | Starry night background — stars, clouds |
+| `js/gamepad.js` | Xbox controller support — emits semantic actions via InputManager, context-aware routing |
+| `js/main.js` | Entry point — initializes all modules on DOMContentLoaded |
+| `css/style.css` | Core launcher styles (header, nav, background, fire-wolf logo, flame animation) |
+| `css/studio.css` | Studio dashboard — sidebar, portrait card grid, detail panel, file preview panel |
 | `css/overlay.css` | Overlay + test result styles |
 
 ### Architecture
-- **IIFE module pattern** — `Studio`, `GameView`, `Overlay`, `FilePreview`, `TestRunner`, `Background` are all `var X = (function() { ... })()`
+- **IIFE module pattern** — `InputManager`, `Studio`, `GameView`, `Overlay`, `FilePreview`, `TestRunner`, `Background`, `GamepadInput` are all `var X = (function() { ... })()`
+- **InputManager** (central input bus):
+  - Semantic actions: `NAV_UP`, `NAV_DOWN`, `NAV_LEFT`, `NAV_RIGHT`, `CONFIRM`, `BACK`, `INFO`, `TAB_PREV`, `TAB_NEXT`, `MENU`
+  - Pub/sub: `on(action, cb)`, `off(action, cb)`, `emit(action, data)`
+  - Context stack: `pushContext(ctx)`, `popContext()`, `getContext()` — contexts: `launcher`, `detail_panel`, `gameplay`, `overlay`
+  - Both keyboard (studio.js) and gamepad (gamepad.js) emit to the same bus
 - **Server API endpoints:**
   - `GET /api/games` — all game metadata + live completion % from claude.md
   - `GET /api/file?path=...` — safe file content for preview (path-traversal protected)
@@ -44,17 +50,37 @@ Game projects live at `Z:/Development/Games/` (sibling directory). The server se
 - **Per-game config** via `game.config.json` in each game folder (varying schemas, normalized server-side)
 - **Godot path** in server.js: `C:\Users\nick\Downloads\Godot_v4.6-stable_win64.exe\Godot_v4.6-stable_win64.exe`
 
-### Studio Dashboard
-- Vertical game list with CSS Grid rows: `[Box Art 64px] [Game Info 1fr] [Dev Metrics 300px] [Health 80px] [Actions 120px]`
-- Top toolbar: search (debounced 250ms), engine filter dropdown, sort dropdown, Run All Tests, Refresh
-- Expandable row details with tabs: Overview, Commits, Tests, Dev Notes, Changelog, Files
-- File links open side-panel preview (markdown, JSON, code rendering)
-- Running games show green border glow + pulsing indicator (polled every 3s)
-- Keyboard navigation: ArrowUp/Down, j/k, Enter to expand/launch, Escape to close
+### Studio Dashboard Layout
+- **Sidebar** (`#studio-sidebar`, 220px): collapsible filter sections for Platforms (Godot/Unity/HTML5) and Genres (RPG/Action/Adventure/Strategy) with item counts
+- **Game Grid** (`#studio-game-list`): `repeat(auto-fill, minmax(180px, 1fr))` responsive portrait cards (~4-5/row at 1920px)
+- **Portrait Cards**: `aspect-ratio: 3/4`, gradient art + emoji icon, engine badge top-left, action buttons top-right (visible on hover/focus), bottom info strip (title, genre, 2px completion bar)
+- **Selection**: gold border + scale(1.05) + glow, unselected cards dim to 0.8 opacity
+- **Toolbar**: search (debounced 250ms), sort dropdown, game count, Run All Tests, Refresh
+- **Detail panel**: slides in from right (420px), header banner + completion bar + tabs (Overview/Commits/Tests/Dev Notes/Changelog/Files)
+- Running games show green border + pulsing "RUNNING" badge (polled every 3s)
 - SessionStorage cache for `/api/games` (30s TTL)
 
+### Fire-Wolf Logo
+- Inline SVG (`#logo-icon`) in top-right, 80x80px, gold silhouette (`#d4af37`, `#f0c850`)
+- Flame mane paths with `.flame-path` CSS animation (staggered `flameFlicker` keyframes)
+- Glowing eye accent (`#ff6030`), hover scale(1.1) with gold drop-shadow
+
+### Input System
+- **Keyboard** (handled in studio.js):
+  - Arrow keys / hjkl = grid navigation (emits NAV_*)
+  - Enter = CONFIRM (launch), Escape = BACK (close detail), I = INFO (open detail)
+  - Shift+ArrowLeft/Right = TAB_PREV/TAB_NEXT (cycle nav tabs)
+  - `/` = focus search bar
+- **Xbox Controller** (handled in gamepad.js):
+  - D-pad/left stick = NAV_*, A = CONFIRM, B = BACK, Y = INFO
+  - LB = TAB_PREV, RB = TAB_NEXT, Start = MENU
+  - Gameplay: Start = toggle overlay, hold Y (1s) = exit game
+  - Overlay: B/Start = close, D-pad = tile nav, A = activate
+- **Grid Navigation**: 2D wrap-around on all edges (right→first, left→last, down→top of column, up→bottom of column)
+- **Tab Memory**: `lastSelectedPerTab` saves/restores game selection per nav tab when switching with LB/RB
+
 ### Nav Tabs
-Store, Library, News, Mods, WIP, Patreon, Credits — "Library" activates the Studio dashboard (default). Other tabs remain placeholder.
+Store, Library, News, Mods, WIP, Patreon, Credits — "Library" activates the Studio dashboard (default). LB/RB gamepad cycling wraps around. Other tabs remain placeholder.
 
 ## Portfolio Dashboard (served via same server)
 | Page | URL |
@@ -88,7 +114,7 @@ Each game has its own `claude.md`/`CLAUDE.md` with detailed architecture docs an
 - **Standard location:** `{game}/tests/run-tests.(gd|mjs|bat|sh)`
 - **Execution:** Server discovers test runner automatically per game
 - **Output:** Structured JSON to stdout with `gameId`, `status`, `testsTotal`, `testsPassed`, `details[]`
-- **Trigger:** Studio dashboard row buttons, toolbar "Run All Tests", or overlay "Run Tests" during gameplay
+- **Trigger:** Studio dashboard card buttons, toolbar "Run All Tests", or overlay "Run Tests" during gameplay
 
 ## Conventions
 
@@ -107,14 +133,20 @@ Each game has its own `claude.md`/`CLAUDE.md` with detailed architecture docs an
 - Game metadata comes from `game.config.json` per game folder — normalized by server.js `/api/games`
 - Studio.js fetches from `/api/games` — no hardcoded game data in client JS
 - File preview validates paths server-side — never serves files outside GAMES_DIR
+- **InputManager** must load before all other scripts (first `<script>` tag after stylesheets)
+- All input actions flow through InputManager — keyboard emits in studio.js, gamepad emits in gamepad.js
+- Components subscribe to semantic actions, never read raw input directly
+- Context stack determines which handlers are active (`launcher` → `gameplay` → `overlay`)
 - Test launcher changes by running `node server.js` and checking `http://localhost:3000`
 
 ### General
 - Dark fantasy theme throughout — night colors, gold accents (#f0c850, #d4af37)
 - No npm/node_modules — server.js uses only Node built-ins (http, fs, path, os, child_process)
 - Desktop shortcut: `Amatris Dashboard.bat` on Desktop opens the portfolio portal
+- Fire-wolf SVG logo replaces the old moon element (pure inline SVG + CSS animation)
 
 ## Known Issues
 - Menu tabs (Store, News, Mods, etc.) are placeholder — only Library works
 - Dashboard completion % depends on checkbox format in game claude.md files
 - Hwarang's Path (Unity) is set as placeholder — no auto-launch
+- Sidebar hides at <900px viewport width (responsive breakpoint)

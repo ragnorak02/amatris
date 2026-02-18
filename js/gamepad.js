@@ -1,27 +1,36 @@
 /* ============================================================
    gamepad.js — Xbox controller support for Amatris
-   Polls the Gamepad API, maps inputs to launcher/overlay actions.
-   Navigates the 2D game grid with D-pad/stick, A=play, X=info.
-   Overlay: horizontal tile nav, B=close, hold-Y=exit to launcher.
+   Polls the Gamepad API, emits semantic actions via InputManager.
+   Context-aware routing: launcher, detail_panel, gameplay, overlay.
    ============================================================ */
 
 var GamepadInput = (function () {
     'use strict';
 
+    /* ---- Named button constants ---- */
+    var BTN_A     = 0;
+    var BTN_B     = 1;
+    var BTN_X     = 2;
+    var BTN_Y     = 3;
+    var BTN_LB    = 4;
+    var BTN_RB    = 5;
+    var BTN_START = 9;
+    var BTN_DPAD_UP    = 12;
+    var BTN_DPAD_DOWN  = 13;
+    var BTN_DPAD_LEFT  = 14;
+    var BTN_DPAD_RIGHT = 15;
+
     /* ---- State ---- */
     var connected = false;
     var prevButtons = [];
     var navRepeatTimer = 0;
-    var rightStickRepeatTimer = 0;
-    var gridFocusIndex = -1;
-    var cardMenuIndex = -1; // -1=none, 0=Play, 1=Info
 
     var NAV_REPEAT_MS = 180;
     var STICK_DEADZONE = 0.5;
 
     /* ---- Hold-Y state ---- */
     var yHoldStart = 0;
-    var Y_HOLD_THRESHOLD = 1000; // 1 second
+    var Y_HOLD_THRESHOLD = 1000;
 
     /* ============================================================
        INIT
@@ -64,15 +73,18 @@ var GamepadInput = (function () {
             justPressed[j] = buttons[j] && !(prevButtons[j] || false);
         }
 
-        var gameRunning = typeof GameView !== 'undefined' && GameView.isRunning();
-        var overlayOpen = typeof Overlay !== 'undefined' && Overlay.isOverlayOpen();
+        var ctx = InputManager.getContext();
 
-        if (overlayOpen) {
-            handleOverlayInput(justPressed, buttons, axes, timestamp);
-        } else if (gameRunning) {
-            handleGameplayInput(justPressed, buttons, timestamp);
-        } else {
-            handleLauncherInput(justPressed, buttons, axes, timestamp);
+        switch (ctx) {
+            case 'overlay':
+                handleOverlayInput(justPressed, buttons, axes, timestamp);
+                break;
+            case 'gameplay':
+                handleGameplayInput(justPressed, buttons, timestamp);
+                break;
+            default: // launcher, detail_panel
+                handleLauncherInput(justPressed, buttons, axes, timestamp);
+                break;
         }
 
         prevButtons = buttons;
@@ -80,13 +92,12 @@ var GamepadInput = (function () {
 
     /* ============================================================
        DIRECTIONAL INPUT HELPER
-       Returns { up, down, left, right } with repeat logic
        ============================================================ */
     function getDirections(justPressed, axes, timestamp) {
-        var up = justPressed[12] || false;
-        var down = justPressed[13] || false;
-        var left = justPressed[14] || false;
-        var right = justPressed[15] || false;
+        var up    = justPressed[BTN_DPAD_UP] || false;
+        var down  = justPressed[BTN_DPAD_DOWN] || false;
+        var left  = justPressed[BTN_DPAD_LEFT] || false;
+        var right = justPressed[BTN_DPAD_RIGHT] || false;
 
         var stickX = axes[0] || 0;
         var stickY = axes[1] || 0;
@@ -94,9 +105,9 @@ var GamepadInput = (function () {
         if (Math.abs(stickX) > STICK_DEADZONE || Math.abs(stickY) > STICK_DEADZONE) {
             if (timestamp - navRepeatTimer > NAV_REPEAT_MS) {
                 if (stickY < -STICK_DEADZONE) up = true;
-                if (stickY > STICK_DEADZONE) down = true;
+                if (stickY > STICK_DEADZONE)  down = true;
                 if (stickX < -STICK_DEADZONE) left = true;
-                if (stickX > STICK_DEADZONE) right = true;
+                if (stickX > STICK_DEADZONE)  right = true;
                 navRepeatTimer = timestamp;
             }
         } else if (!up && !down && !left && !right) {
@@ -107,154 +118,42 @@ var GamepadInput = (function () {
     }
 
     /* ============================================================
-       LAUNCHER INPUT — 2D grid navigation
-       Left stick / D-pad = navigate grid
-       Right stick = navigate card menu (Play / Info)
-       A = confirm card menu selection (or Play if no menu selection)
+       LAUNCHER / DETAIL_PANEL INPUT
+       D-pad/stick → NAV_*, A→CONFIRM, B→BACK, Y→INFO,
+       LB→TAB_PREV, RB→TAB_NEXT, Start→MENU
        ============================================================ */
     function handleLauncherInput(justPressed, buttons, axes, timestamp) {
-        var cards = document.querySelectorAll('.game-card');
-        if (cards.length === 0) return;
-
+        var A = InputManager.ACTIONS;
         var dir = getDirections(justPressed, axes, timestamp);
 
-        // Calculate grid dimensions
-        var cols = getGridColumns();
+        if (dir.up)    InputManager.emit(A.NAV_UP);
+        if (dir.down)  InputManager.emit(A.NAV_DOWN);
+        if (dir.left)  InputManager.emit(A.NAV_LEFT);
+        if (dir.right) InputManager.emit(A.NAV_RIGHT);
 
-        // Left stick / D-pad — navigate the grid
-        if (dir.up || dir.down || dir.left || dir.right) {
-            // Reset card menu when moving to a new card
-            cardMenuIndex = -1;
-            clearCardMenuFocus();
-
-            if (gridFocusIndex < 0) {
-                gridFocusIndex = 0;
-            } else {
-                var col = gridFocusIndex % cols;
-
-                if (dir.right) {
-                    gridFocusIndex = gridFocusIndex + 1;
-                    if (gridFocusIndex >= cards.length) gridFocusIndex = 0;
-                }
-                if (dir.left) {
-                    gridFocusIndex = gridFocusIndex - 1;
-                    if (gridFocusIndex < 0) gridFocusIndex = cards.length - 1;
-                }
-                if (dir.down) {
-                    var newIdx = gridFocusIndex + cols;
-                    if (newIdx >= cards.length) {
-                        gridFocusIndex = col < cards.length ? col : 0;
-                    } else {
-                        gridFocusIndex = newIdx;
-                    }
-                }
-                if (dir.up) {
-                    var newIdx2 = gridFocusIndex - cols;
-                    if (newIdx2 < 0) {
-                        var lastRowStart = Math.floor((cards.length - 1) / cols) * cols;
-                        var target = lastRowStart + col;
-                        gridFocusIndex = target < cards.length ? target : cards.length - 1;
-                    } else {
-                        gridFocusIndex = newIdx2;
-                    }
-                }
-            }
-
-            applyGridFocus(cards);
-        }
-
-        // Right stick — navigate card menu (Play / Info) on focused card
-        if (gridFocusIndex >= 0 && gridFocusIndex < cards.length) {
-            var rsX = axes[2] || 0;
-            var rsY = axes[3] || 0;
-            var rsMoved = false;
-
-            if (Math.abs(rsX) > STICK_DEADZONE || Math.abs(rsY) > STICK_DEADZONE) {
-                if (timestamp - rightStickRepeatTimer > NAV_REPEAT_MS) {
-                    if (rsX > STICK_DEADZONE || rsY > STICK_DEADZONE) {
-                        cardMenuIndex = cardMenuIndex >= 1 ? 0 : cardMenuIndex + 1;
-                        rsMoved = true;
-                    } else if (rsX < -STICK_DEADZONE || rsY < -STICK_DEADZONE) {
-                        cardMenuIndex = cardMenuIndex <= 0 ? 1 : cardMenuIndex - 1;
-                        rsMoved = true;
-                    }
-                    rightStickRepeatTimer = timestamp;
-                }
-            } else {
-                rightStickRepeatTimer = 0;
-            }
-
-            if (rsMoved) {
-                applyCardMenuFocus(cards[gridFocusIndex]);
-            }
-        }
-
-        // A button (0) — confirm: click focused menu button, or default to Play
-        if (justPressed[0] && gridFocusIndex >= 0 && gridFocusIndex < cards.length) {
-            var focusedCard = cards[gridFocusIndex];
-            if (cardMenuIndex === 1) {
-                var infoBtn = focusedCard.querySelector('.card-action-btn.info-btn');
-                if (infoBtn) infoBtn.click();
-            } else {
-                var playBtn = focusedCard.querySelector('.card-action-btn.play-btn');
-                if (playBtn) playBtn.click();
-            }
-        }
-
-        // B button (1) — close detail panel if open
-        if (justPressed[1]) {
-            if (typeof Studio !== 'undefined' && typeof Studio.closeDetailPanel === 'function') {
-                Studio.closeDetailPanel();
-            }
-        }
-    }
-
-    function applyCardMenuFocus(card) {
-        if (!card) return;
-        var btns = card.querySelectorAll('.card-action-btn');
-        for (var i = 0; i < btns.length; i++) {
-            btns[i].classList.toggle('gamepad-focus', i === cardMenuIndex);
-        }
-    }
-
-    function clearCardMenuFocus() {
-        var focused = document.querySelectorAll('.card-action-btn.gamepad-focus');
-        for (var i = 0; i < focused.length; i++) {
-            focused[i].classList.remove('gamepad-focus');
-        }
-    }
-
-    function getGridColumns() {
-        var list = document.getElementById('studio-game-list');
-        if (!list) return 4;
-        var style = window.getComputedStyle(list);
-        var cols = style.getPropertyValue('grid-template-columns').split(' ').length;
-        return cols || 4;
-    }
-
-    function applyGridFocus(cards) {
-        for (var i = 0; i < cards.length; i++) {
-            cards[i].classList.toggle('gamepad-focus', i === gridFocusIndex);
-        }
+        if (justPressed[BTN_A])     InputManager.emit(A.CONFIRM);
+        if (justPressed[BTN_B])     InputManager.emit(A.BACK);
+        if (justPressed[BTN_Y])     InputManager.emit(A.INFO);
+        if (justPressed[BTN_LB])    InputManager.emit(A.TAB_PREV);
+        if (justPressed[BTN_RB])    InputManager.emit(A.TAB_NEXT);
+        if (justPressed[BTN_START]) InputManager.emit(A.MENU);
     }
 
     /* ============================================================
-       GAMEPLAY INPUT (game running, overlay closed)
-       Menu/Start (9) opens overlay. Hold-Y exits game.
+       GAMEPLAY INPUT — Start opens overlay, hold-Y exits game
        ============================================================ */
     function handleGameplayInput(justPressed, buttons, timestamp) {
-        // Menu/Start button (9) — open overlay
-        if (justPressed[9]) {
-            Overlay.toggle();
+        if (justPressed[BTN_START]) {
+            if (typeof Overlay !== 'undefined') Overlay.toggle();
         }
 
-        // Hold Y (btn 3) — exit game and return to launcher
-        if (buttons[3]) {
+        // Hold Y — exit game
+        if (buttons[BTN_Y]) {
             if (yHoldStart === 0) yHoldStart = timestamp;
             if (timestamp - yHoldStart >= Y_HOLD_THRESHOLD) {
                 yHoldStart = 0;
-                Overlay.close();
-                GameView.close();
+                if (typeof Overlay !== 'undefined') Overlay.close();
+                if (typeof GameView !== 'undefined') GameView.close();
             }
         } else {
             yHoldStart = 0;
@@ -262,39 +161,32 @@ var GamepadInput = (function () {
     }
 
     /* ============================================================
-       OVERLAY INPUT — Horizontal tile nav, B=close, hold-Y=exit
+       OVERLAY INPUT — B/Start close, D-pad nav, A activate, hold-Y exit
        ============================================================ */
     function handleOverlayInput(justPressed, buttons, axes, timestamp) {
-        // B button (1) or Start (9) — close overlay (return to game)
-        if (justPressed[1] || justPressed[9]) {
-            Overlay.close();
+        if (justPressed[BTN_B] || justPressed[BTN_START]) {
+            if (typeof Overlay !== 'undefined') Overlay.close();
             return;
         }
 
-        // Hold Y (btn 3) — exit game and return to launcher
-        if (buttons[3]) {
+        // Hold Y — exit game
+        if (buttons[BTN_Y]) {
             if (yHoldStart === 0) yHoldStart = timestamp;
             if (timestamp - yHoldStart >= Y_HOLD_THRESHOLD) {
                 yHoldStart = 0;
-                Overlay.close();
-                GameView.close();
+                if (typeof Overlay !== 'undefined') Overlay.close();
+                if (typeof GameView !== 'undefined') GameView.close();
             }
         } else {
             yHoldStart = 0;
         }
 
-        // Left/Right — navigate tiles horizontally
         var dir = getDirections(justPressed, axes, timestamp);
 
-        if (dir.left) {
-            Overlay.moveTileFocus(-1);
-        }
-        if (dir.right) {
-            Overlay.moveTileFocus(1);
-        }
+        if (dir.left && typeof Overlay !== 'undefined')  Overlay.moveTileFocus(-1);
+        if (dir.right && typeof Overlay !== 'undefined') Overlay.moveTileFocus(1);
 
-        // A button (0) — activate focused tile
-        if (justPressed[0]) {
+        if (justPressed[BTN_A] && typeof Overlay !== 'undefined') {
             Overlay.activateFocusedTile();
         }
     }

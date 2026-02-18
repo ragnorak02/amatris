@@ -41,54 +41,51 @@ body {
     100% { opacity: 1; }
 }
 
-/* Moon */
-#bg-moon {
+/* Fire-Wolf Logo */
+#logo-icon {
     position: fixed;
-    top: 6%;
-    right: 12%;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 40% 40%, #fce68a, #e6b830 60%, #c49520);
-    box-shadow:
-        0 0 40px 10px rgba(252, 230, 138, 0.25),
-        0 0 120px 40px rgba(252, 230, 138, 0.08);
-    z-index: 1;
+    top: 16px;
+    right: 24px;
+    width: 80px;
+    height: 80px;
+    z-index: 20;
     pointer-events: auto;
     cursor: pointer;
-    transition: transform 0.6s ease, box-shadow 0.6s ease, filter 0.6s ease;
-    overflow: hidden;
+    filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.4));
+    transition: transform 0.3s ease, filter 0.3s ease;
 }
 
-#bg-moon:hover {
-    transform: scale(1.15);
-    box-shadow:
-        0 0 60px 20px rgba(252, 230, 138, 0.4),
-        0 0 180px 60px rgba(252, 230, 138, 0.15),
-        0 0 300px 100px rgba(252, 230, 138, 0.05);
-    filter: brightness(1.2);
+#logo-icon:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.6));
 }
 
-/* Dark clouds covering bottom half of the moon */
-#moon-clouds {
-    position: absolute;
-    bottom: -10px;
-    left: -30px;
-    right: -30px;
-    height: 70px;
-    pointer-events: none;
-    background:
-        radial-gradient(ellipse 60px 35px at 20% 60%, rgba(15, 15, 30, 0.8), transparent),
-        radial-gradient(ellipse 80px 30px at 55% 50%, rgba(10, 10, 25, 0.9), transparent),
-        radial-gradient(ellipse 50px 25px at 80% 65%, rgba(20, 18, 35, 0.7), transparent),
-        radial-gradient(ellipse 90px 40px at 40% 70%, rgba(12, 12, 28, 0.85), transparent);
-    animation: moon-cloud-drift 12s ease-in-out infinite alternate;
+#wolf-logo {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
 }
 
-@keyframes moon-cloud-drift {
-    0%   { transform: translateX(-4px); opacity: 0.85; }
-    50%  { opacity: 1; }
-    100% { transform: translateX(4px); opacity: 0.9; }
+.flame-path {
+    animation: flameFlicker 2s ease-in-out infinite alternate;
+}
+
+@keyframes flameFlicker {
+    0%   { opacity: 0.6; transform: translateY(0); }
+    50%  { opacity: 1; transform: translateY(-1px); }
+    100% { opacity: 0.7; transform: translateY(1px); }
+}
+
+/* Gamepad focus on menu tabs (LB/RB switching) */
+.menu-tab.gamepad-focus {
+    color: #f0c850;
+    text-shadow: 0 0 10px rgba(240, 200, 80, 0.5);
+}
+
+.menu-tab.gamepad-focus::after {
+    background: linear-gradient(90deg, transparent, #f0c850, transparent);
+    transform: scaleX(1);
+    opacity: 1;
 }
 
 /* Drifting clouds */
