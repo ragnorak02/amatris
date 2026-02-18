@@ -79,8 +79,8 @@
     <div id="overlay" class="hidden">
         <div class="overlay-backdrop"></div>
 
-        <!-- Overlay Game Title -->
-        <div id="overlay-game-title"></div>
+        <!-- Top-Right: Overlay Label -->
+        <div id="overlay-label">SHIFT+TAB &mdash; OVERLAY</div>
 
         <!-- Top-Center: Shortcut Strip -->
         <div id="shortcut-strip">
@@ -92,9 +92,9 @@
                 <span class="tile-icon">&#128266;</span>
                 <span class="tile-label">Volume</span>
             </div>
-            <div class="shortcut-tile tile-blue" data-module="friends">
-                <span class="tile-icon">&#128101;</span>
-                <span class="tile-label">Friends</span>
+            <div class="shortcut-tile tile-cyan" data-module="screen">
+                <span class="tile-icon">&#128187;</span>
+                <span class="tile-label">Screen</span>
             </div>
             <div class="shortcut-tile tile-green" data-module="screenshots">
                 <span class="tile-icon">&#128248;</span>
@@ -106,49 +106,46 @@
             </div>
         </div>
 
-        <!-- Top-Left: Game Menu Panel (collapsible) -->
-        <div id="overlay-menu" class="side-panel">
-            <div class="panel-header">
-                <h3>Game Menu</h3>
-                <button class="collapse-btn" data-panel="menu" title="Collapse">&#9664;</button>
+        <!-- Instructions Banner -->
+        <div id="overlay-instructions">
+            <div class="instruction-row">
+                <span class="instruction-text">Hit <span class="btn-badge btn-b">B</span> to return to Game</span>
             </div>
-            <div class="panel-content">
-                <button class="menu-btn" data-action="resume"><span>&#9654;</span> Resume Game</button>
-                <button class="menu-btn" data-action="restart"><span>&#8635;</span> Restart Game</button>
-                <div class="menu-divider"></div>
-                <button class="menu-btn" data-action="run-tests"><span>&#9889;</span> Run Tests</button>
-                <div class="menu-divider"></div>
-                <button class="menu-btn" data-action="launcher"><span>&#8962;</span> Back to Launcher</button>
-                <button class="menu-btn" data-action="close-game"><span>&#10005;</span> Close Game</button>
-                <div class="menu-divider"></div>
-                <button class="menu-btn danger" data-action="exit"><span>&#9211;</span> Exit Launcher</button>
+            <div class="instruction-row">
+                <span class="instruction-text">Hold <span class="btn-badge btn-y">Y</span> to exit game and return to Amatris</span>
             </div>
         </div>
 
-        <!-- Bottom-Left: Performance Panel (collapsible) -->
-        <div id="overlay-perf" class="side-panel">
-            <div class="panel-header">
-                <h3>Performance</h3>
-                <button class="collapse-btn" data-panel="perf" title="Collapse">&#9664;</button>
-            </div>
-            <div class="panel-content">
-                <div class="perf-row">
-                    <span class="perf-label">FPS</span>
-                    <span class="perf-value" id="perf-fps">--</span>
-                </div>
-                <div class="perf-row">
-                    <span class="perf-label">CPU</span>
-                    <span class="perf-value" id="perf-cpu">--</span>
-                </div>
-                <div class="perf-row">
-                    <span class="perf-label">RAM</span>
-                    <span class="perf-value" id="perf-ram">--</span>
-                </div>
-            </div>
+        <!-- Game Info (icon, name, mode, status dot) -->
+        <div id="overlay-game-info">
+            <div class="game-info-icon"></div>
+            <div class="game-info-name"></div>
+            <div class="game-info-mode"></div>
+            <div class="status-dot"></div>
         </div>
 
         <!-- Module Content (center, expands when a tile is clicked) -->
         <div id="module-content" class="hidden"></div>
+
+        <!-- Bottom-Left: Performance Panel -->
+        <div id="overlay-perf">
+            <div class="perf-header">PERFORMANCE</div>
+            <div class="perf-row">
+                <span class="perf-label">FPS</span>
+                <span class="perf-value" id="perf-fps">--</span>
+            </div>
+            <div class="perf-row">
+                <span class="perf-label">CPU</span>
+                <span class="perf-value" id="perf-cpu">--</span>
+            </div>
+            <div class="perf-row">
+                <span class="perf-label">RAM</span>
+                <span class="perf-value" id="perf-ram">--</span>
+            </div>
+        </div>
+
+        <!-- Bottom-Center: Hint -->
+        <div id="overlay-bottom-hint">Press <kbd>Shift</kbd> + <kbd>Tab</kbd> for overlay</div>
     </div>
 
     <!-- Scripts -->

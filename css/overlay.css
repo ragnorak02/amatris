@@ -1,6 +1,6 @@
 /* ============================================================
    Overlay & Game View Styles — Amatris Portal
-   Dark fantasy theme, in-launcher overlay system.
+   Dark fantasy theme, single-screen overlay system.
    ============================================================ */
 
 /* --- Utility --- */
@@ -116,7 +116,7 @@
 }
 
 /* ============================================================
-   OVERLAY — Main overlay container
+   OVERLAY — Main overlay container (instant appear)
    ============================================================ */
 #overlay {
     position: fixed;
@@ -124,7 +124,7 @@
     z-index: 100;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.15s ease;
 }
 
 #overlay.visible {
@@ -140,25 +140,18 @@
 }
 
 /* ============================================================
-   OVERLAY GAME TITLE — Shows current game name
+   OVERLAY LABEL — Top-right "SHIFT+TAB — OVERLAY" text
    ============================================================ */
-#overlay-game-title {
+#overlay-label {
     position: absolute;
-    top: 90px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 18px;
+    right: 28px;
     z-index: 102;
-    font-size: 1.4rem;
+    font-size: 0.65rem;
     font-weight: 600;
-    color: #f0c850;
-    letter-spacing: 0.08em;
-    text-align: center;
-    white-space: nowrap;
-    text-shadow: 0 2px 12px rgba(240, 200, 80, 0.25);
-}
-
-#overlay.visible #overlay-game-title {
-    animation: slideInDown 0.35s ease-out 0.08s both;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #605848;
 }
 
 /* ============================================================
@@ -217,11 +210,11 @@
     box-shadow: 0 4px 20px rgba(192, 57, 43, 0.2);
 }
 
-.tile-blue { border-color: rgba(41, 128, 185, 0.4); }
-.tile-blue:hover, .tile-blue.active {
-    background: rgba(41, 128, 185, 0.15);
-    border-color: rgba(41, 128, 185, 0.7);
-    box-shadow: 0 4px 20px rgba(41, 128, 185, 0.2);
+.tile-cyan { border-color: rgba(0, 188, 212, 0.4); }
+.tile-cyan:hover, .tile-cyan.active {
+    background: rgba(0, 188, 212, 0.15);
+    border-color: rgba(0, 188, 212, 0.7);
+    box-shadow: 0 4px 20px rgba(0, 188, 212, 0.2);
 }
 
 .tile-green { border-color: rgba(39, 174, 96, 0.4); }
@@ -236,6 +229,13 @@
     background: rgba(150, 150, 150, 0.1);
     border-color: rgba(150, 150, 150, 0.6);
     box-shadow: 0 4px 20px rgba(150, 150, 150, 0.15);
+}
+
+/* Focused tile — gold glow for keyboard/gamepad focus */
+.shortcut-tile.focused {
+    border-color: rgba(240, 200, 80, 0.7);
+    box-shadow: 0 0 16px rgba(240, 200, 80, 0.3), 0 0 4px rgba(240, 200, 80, 0.15);
+    background: rgba(240, 200, 80, 0.06);
 }
 
 .tile-icon {
@@ -254,141 +254,132 @@
     color: #e0dcd0;
 }
 
+.shortcut-tile.focused .tile-label {
+    color: #f0c850;
+}
+
 /* ============================================================
-   SIDE PANELS — Left-side collapsible panels
+   INSTRUCTIONS BANNER — B/Y button badges + nav hints
    ============================================================ */
-.side-panel {
+#overlay-instructions {
     position: absolute;
+    top: 130px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 102;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.instruction-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.instruction-text {
+    font-size: 0.95rem;
+    color: #c8c0b0;
+    letter-spacing: 0.03em;
+}
+
+/* Controller button badges */
+.btn-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    vertical-align: middle;
+    margin: 0 2px;
+}
+
+.btn-b {
+    background: #c0392b;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(192, 57, 43, 0.4);
+}
+
+.btn-y {
+    background: #d4af37;
+    color: #1a1a2e;
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.4);
+}
+
+/* ============================================================
+   GAME INFO — Center game icon, name, mode, status dot
+   ============================================================ */
+#overlay-game-info {
+    position: absolute;
+    top: 220px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 102;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.game-info-icon {
+    font-size: 4rem;
+    line-height: 1;
+}
+
+.game-info-name {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #e0dcd0;
+    letter-spacing: 0.06em;
+}
+
+.game-info-mode {
+    font-size: 0.82rem;
+    color: #807860;
+    letter-spacing: 0.04em;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4caf50;
+    margin-top: 4px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   PERFORMANCE PANEL — Bottom-left, standalone (no side-panel)
+   ============================================================ */
+#overlay-perf {
+    position: absolute;
+    bottom: 24px;
+    left: 24px;
     z-index: 102;
     background: rgba(12, 12, 28, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
     backdrop-filter: blur(10px);
-    min-width: 220px;
-    transition: all 0.35s cubic-bezier(0.25, 0.9, 0.35, 1);
-    overflow: hidden;
+    min-width: 180px;
+    padding: 0 0 4px;
 }
 
-.side-panel.collapsed {
-    min-width: 0;
-    width: 48px !important;
-    overflow: hidden;
-}
-
-.side-panel.collapsed .panel-content {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.side-panel.collapsed .panel-header h3 {
-    opacity: 0;
-    width: 0;
-    overflow: hidden;
-}
-
-#overlay-menu {
-    top: 24px;
-    left: 24px;
-}
-
-#overlay-perf {
-    bottom: 24px;
-    left: 24px;
-}
-
-.panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 14px;
+.perf-header {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #807860;
+    padding: 10px 14px 6px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.panel-header h3 {
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #c8c0b0;
-    white-space: nowrap;
-    transition: opacity 0.2s;
-}
-
-.collapse-btn {
-    background: none;
-    border: none;
-    color: #807860;
-    font-size: 0.9rem;
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 4px;
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-
-.collapse-btn:hover {
-    color: #f0c850;
-    background: rgba(240, 200, 80, 0.1);
-}
-
-.side-panel.collapsed .collapse-btn {
-    transform: rotate(180deg);
-}
-
-.panel-content {
-    padding: 8px;
-    transition: opacity 0.2s;
-}
-
-/* ============================================================
-   MENU PANEL — Game control actions
-   ============================================================ */
-.menu-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 10px 12px;
-    background: none;
-    border: none;
-    color: #c8c0b0;
-    font-size: 0.85rem;
-    letter-spacing: 0.03em;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.2s;
-    text-align: left;
-}
-
-.menu-btn:hover {
-    background: rgba(240, 200, 80, 0.08);
-    color: #f0c850;
-}
-
-.menu-btn span {
-    font-size: 1.1rem;
-    width: 24px;
-    text-align: center;
-}
-
-.menu-btn.danger {
-    color: #a05050;
-}
-
-.menu-btn.danger:hover {
-    background: rgba(180, 60, 60, 0.15);
-    color: #e06060;
-}
-
-.menu-divider {
-    height: 1px;
-    background: rgba(255, 255, 255, 0.04);
-    margin: 4px 8px;
-}
-
-/* ============================================================
-   PERFORMANCE PANEL
-   ============================================================ */
 .perf-row {
     display: flex;
     justify-content: space-between;
@@ -420,16 +411,42 @@
 .perf-value.bad { color: #e06060; }
 
 /* ============================================================
+   BOTTOM HINT — "Press Shift + Tab for overlay"
+   ============================================================ */
+#overlay-bottom-hint {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 102;
+    font-size: 0.8rem;
+    color: #605848;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+#overlay-bottom-hint kbd {
+    display: inline-block;
+    background: rgba(240, 200, 80, 0.1);
+    border: 1px solid rgba(240, 200, 80, 0.3);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: inherit;
+    font-size: 0.75rem;
+    color: #f0c850;
+}
+
+/* ============================================================
    MODULE CONTENT — Center panel for expanded modules
    ============================================================ */
 #module-content {
     position: absolute;
-    top: 140px;
+    top: 380px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 101;
     width: 520px;
-    max-height: calc(100vh - 180px);
+    max-height: calc(100vh - 420px);
     overflow-y: auto;
     background: rgba(12, 12, 28, 0.92);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -474,73 +491,6 @@
 
 .module-body {
     padding: 16px 22px 22px;
-}
-
-/* ============================================================
-   GAME PREVIEW MODULE (purple tile)
-   ============================================================ */
-.game-preview {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-}
-
-.game-preview-art {
-    width: 140px;
-    height: 200px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #2c1a4a, #0a0a1a);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.game-preview-art .preview-icon {
-    font-size: 3.5rem;
-}
-
-.game-preview-info {
-    flex: 1;
-}
-
-.game-preview-info h3 {
-    font-size: 1.3rem;
-    color: #e0dcd0;
-    margin-bottom: 4px;
-}
-
-.game-preview-info .preview-subtitle {
-    font-size: 0.8rem;
-    color: #807860;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 16px;
-}
-
-.preview-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.preview-stat {
-    display: flex;
-    justify-content: space-between;
-}
-
-.preview-stat .stat-key {
-    font-size: 0.75rem;
-    color: #807860;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-
-.preview-stat .stat-val {
-    font-size: 0.85rem;
-    color: #c8c0b0;
-    font-weight: 600;
 }
 
 /* ============================================================
@@ -632,88 +582,39 @@
 }
 
 /* ============================================================
-   FRIENDS MODULE (blue tile)
+   SCREEN MODULE (cyan tile)
    ============================================================ */
-.friends-list {
+.screen-control {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    gap: 12px;
 }
 
-.friend-entry {
-    display: flex;
+.screen-fs-btn {
+    display: inline-flex;
     align-items: center;
-    gap: 14px;
-    padding: 10px 12px;
+    gap: 8px;
+    padding: 12px 28px;
+    background: rgba(0, 188, 212, 0.1);
+    border: 1px solid rgba(0, 188, 212, 0.4);
     border-radius: 8px;
-    transition: background 0.2s;
-}
-
-.friend-entry:hover {
-    background: rgba(255, 255, 255, 0.03);
-}
-
-.friend-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(41, 128, 185, 0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-    border: 2px solid transparent;
-}
-
-.friend-entry[data-status="playing"] .friend-avatar {
-    border-color: rgba(76, 175, 80, 0.6);
-}
-
-.friend-entry[data-status="online"] .friend-avatar {
-    border-color: rgba(41, 128, 185, 0.6);
-}
-
-.friend-entry[data-status="away"] .friend-avatar {
-    border-color: rgba(240, 200, 80, 0.4);
-}
-
-.friend-info {
-    flex: 1;
-}
-
-.friend-name {
-    font-size: 0.9rem;
     color: #e0dcd0;
-    font-weight: 500;
-}
-
-.friend-status {
-    font-size: 0.72rem;
-    letter-spacing: 0.04em;
-    margin-top: 2px;
-}
-
-.friend-status.status-playing { color: #4caf50; }
-.friend-status.status-online { color: #2980b9; }
-.friend-status.status-away { color: #f0c850; }
-.friend-status.status-offline { color: #605848; }
-
-.friend-action-btn {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #a09880;
-    font-size: 0.7rem;
-    padding: 5px 12px;
-    border-radius: 6px;
+    font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s;
 }
 
-.friend-action-btn:hover {
-    background: rgba(41, 128, 185, 0.15);
-    border-color: rgba(41, 128, 185, 0.4);
-    color: #e0dcd0;
+.screen-fs-btn:hover {
+    background: rgba(0, 188, 212, 0.2);
+    border-color: rgba(0, 188, 212, 0.7);
+    color: #fff;
+}
+
+.screen-hint {
+    font-size: 0.72rem;
+    color: #605848;
+    text-align: center;
 }
 
 /* ============================================================
@@ -1017,31 +918,6 @@
 }
 
 /* ============================================================
-   OVERLAY ANIMATIONS
-   ============================================================ */
-@keyframes slideInLeft {
-    from { transform: translateX(-30px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes slideInDown {
-    from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
-    to { transform: translateX(-50%) translateY(0); opacity: 1; }
-}
-
-#overlay.visible #shortcut-strip {
-    animation: slideInDown 0.35s ease-out;
-}
-
-#overlay.visible #overlay-menu {
-    animation: slideInLeft 0.3s ease-out 0.05s both;
-}
-
-#overlay.visible #overlay-perf {
-    animation: slideInLeft 0.3s ease-out 0.1s both;
-}
-
-/* ============================================================
    RESPONSIVE
    ============================================================ */
 @media (max-width: 768px) {
@@ -1062,11 +938,19 @@
         width: calc(100vw - 32px);
     }
 
-    .side-panel {
-        min-width: 180px;
-    }
-
     .screenshots-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    #overlay-instructions {
+        top: 110px;
+    }
+
+    #overlay-game-info {
+        top: 190px;
+    }
+
+    #module-content {
+        top: 340px;
     }
 }

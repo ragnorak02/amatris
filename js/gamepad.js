@@ -2,6 +2,7 @@
    gamepad.js — Xbox controller support for Amatris
    Polls the Gamepad API, maps inputs to launcher/overlay actions.
    Navigates the 2D game grid with D-pad/stick, A=play, X=info.
+   Overlay: horizontal tile nav, B=close, hold-Y=exit to launcher.
    ============================================================ */
 
 var GamepadInput = (function () {
@@ -12,12 +13,15 @@ var GamepadInput = (function () {
     var prevButtons = [];
     var navRepeatTimer = 0;
     var rightStickRepeatTimer = 0;
-    var overlayFocusIndex = -1;
     var gridFocusIndex = -1;
     var cardMenuIndex = -1; // -1=none, 0=Play, 1=Info
 
     var NAV_REPEAT_MS = 180;
     var STICK_DEADZONE = 0.5;
+
+    /* ---- Hold-Y state ---- */
+    var yHoldStart = 0;
+    var Y_HOLD_THRESHOLD = 1000; // 1 second
 
     /* ============================================================
        INIT
@@ -66,7 +70,7 @@ var GamepadInput = (function () {
         if (overlayOpen) {
             handleOverlayInput(justPressed, buttons, axes, timestamp);
         } else if (gameRunning) {
-            handleGameplayInput(justPressed);
+            handleGameplayInput(justPressed, buttons, timestamp);
         } else {
             handleLauncherInput(justPressed, buttons, axes, timestamp);
         }
@@ -168,11 +172,9 @@ var GamepadInput = (function () {
             if (Math.abs(rsX) > STICK_DEADZONE || Math.abs(rsY) > STICK_DEADZONE) {
                 if (timestamp - rightStickRepeatTimer > NAV_REPEAT_MS) {
                     if (rsX > STICK_DEADZONE || rsY > STICK_DEADZONE) {
-                        // Right or down -> next menu item
                         cardMenuIndex = cardMenuIndex >= 1 ? 0 : cardMenuIndex + 1;
                         rsMoved = true;
                     } else if (rsX < -STICK_DEADZONE || rsY < -STICK_DEADZONE) {
-                        // Left or up -> prev menu item
                         cardMenuIndex = cardMenuIndex <= 0 ? 1 : cardMenuIndex - 1;
                         rsMoved = true;
                     }
@@ -194,7 +196,6 @@ var GamepadInput = (function () {
                 var infoBtn = focusedCard.querySelector('.card-action-btn.info-btn');
                 if (infoBtn) infoBtn.click();
             } else {
-                // Default or cardMenuIndex === 0 -> Play
                 var playBtn = focusedCard.querySelector('.card-action-btn.play-btn');
                 if (playBtn) playBtn.click();
             }
@@ -239,66 +240,62 @@ var GamepadInput = (function () {
 
     /* ============================================================
        GAMEPLAY INPUT (game running, overlay closed)
+       Menu/Start (9) opens overlay. Hold-Y exits game.
        ============================================================ */
-    function handleGameplayInput(justPressed) {
+    function handleGameplayInput(justPressed, buttons, timestamp) {
         // Menu/Start button (9) — open overlay
         if (justPressed[9]) {
             Overlay.toggle();
-            overlayFocusIndex = -1;
+        }
+
+        // Hold Y (btn 3) — exit game and return to launcher
+        if (buttons[3]) {
+            if (yHoldStart === 0) yHoldStart = timestamp;
+            if (timestamp - yHoldStart >= Y_HOLD_THRESHOLD) {
+                yHoldStart = 0;
+                Overlay.close();
+                GameView.close();
+            }
+        } else {
+            yHoldStart = 0;
         }
     }
 
     /* ============================================================
-       OVERLAY INPUT
+       OVERLAY INPUT — Horizontal tile nav, B=close, hold-Y=exit
        ============================================================ */
     function handleOverlayInput(justPressed, buttons, axes, timestamp) {
-        var menuBtns = getOverlayMenuButtons();
-
-        // B button (1) or Start (9) — close overlay
+        // B button (1) or Start (9) — close overlay (return to game)
         if (justPressed[1] || justPressed[9]) {
-            clearOverlayFocus(menuBtns);
             Overlay.close();
             return;
         }
 
+        // Hold Y (btn 3) — exit game and return to launcher
+        if (buttons[3]) {
+            if (yHoldStart === 0) yHoldStart = timestamp;
+            if (timestamp - yHoldStart >= Y_HOLD_THRESHOLD) {
+                yHoldStart = 0;
+                Overlay.close();
+                GameView.close();
+            }
+        } else {
+            yHoldStart = 0;
+        }
+
+        // Left/Right — navigate tiles horizontally
         var dir = getDirections(justPressed, axes, timestamp);
 
-        if (dir.up && menuBtns.length > 0) {
-            overlayFocusIndex = overlayFocusIndex <= 0
-                ? menuBtns.length - 1
-                : overlayFocusIndex - 1;
-            applyOverlayFocus(menuBtns);
+        if (dir.left) {
+            Overlay.moveTileFocus(-1);
+        }
+        if (dir.right) {
+            Overlay.moveTileFocus(1);
         }
 
-        if (dir.down && menuBtns.length > 0) {
-            overlayFocusIndex = overlayFocusIndex >= menuBtns.length - 1
-                ? 0
-                : overlayFocusIndex + 1;
-            applyOverlayFocus(menuBtns);
-        }
-
-        // A button (0) — click focused menu item
-        if (justPressed[0] && overlayFocusIndex >= 0 && menuBtns[overlayFocusIndex]) {
-            menuBtns[overlayFocusIndex].click();
-        }
-    }
-
-    function getOverlayMenuButtons() {
-        var panel = document.querySelector('#overlay-menu .panel-content');
-        if (!panel) return [];
-        return Array.from(panel.querySelectorAll('.menu-btn'));
-    }
-
-    function applyOverlayFocus(menuBtns) {
-        for (var i = 0; i < menuBtns.length; i++) {
-            menuBtns[i].classList.toggle('gamepad-focus', i === overlayFocusIndex);
-        }
-    }
-
-    function clearOverlayFocus(menuBtns) {
-        overlayFocusIndex = -1;
-        for (var i = 0; i < menuBtns.length; i++) {
-            menuBtns[i].classList.remove('gamepad-focus');
+        // A button (0) — activate focused tile
+        if (justPressed[0]) {
+            Overlay.activateFocusedTile();
         }
     }
 
