@@ -245,6 +245,84 @@ function getGames(res) {
             } catch (e) { /* ignore */ }
         }
 
+        // ---- Dashboard: Compliance file checks (8 standard files) ----
+        const complianceMap = {
+            'CLAUDE.md': !!claudeMdPath,
+            'game_direction.md': !!gameDirectionPath,
+            'test_plan.md': fs.existsSync(path.join(folderPath, 'test_plan.md')),
+            'status.html': fs.existsSync(path.join(folderPath, 'status.html')),
+            'game.config.json': fs.existsSync(path.join(folderPath, 'game.config.json')),
+            'project_status.json': !!projectStatus,
+            'achievements.json': !!achievementsPath,
+            'achievements_integration.md': fs.existsSync(path.join(folderPath, 'achievements_integration.md'))
+        };
+        const dashMissing = Object.keys(complianceMap).filter(k => !complianceMap[k]);
+        const complianceScore = 8 - dashMissing.length;
+
+        // ---- Dashboard: Date tracking via recursive mtime scan ----
+        const codeExts = new Set(['.gd', '.js', '.cs', '.tscn', '.tres', '.gdshader']);
+        const skipDirs = new Set(['.git', '.godot', '.claude', 'node_modules', '.import', 'addons']);
+        const projSub = (config.launch && config.launch.projectSubdir) || '';
+        const scanRoot = projSub ? path.join(folderPath, projSub) : folderPath;
+        let lastCodeMtime = 0;
+        const walkForMtime = (dir, depth) => {
+            if (depth > 4) return;
+            try {
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const de of entries) {
+                    if (de.isDirectory()) {
+                        if (!skipDirs.has(de.name)) walkForMtime(path.join(dir, de.name), depth + 1);
+                    } else if (de.isFile() && codeExts.has(path.extname(de.name).toLowerCase())) {
+                        try {
+                            const mt = fs.statSync(path.join(dir, de.name)).mtimeMs;
+                            if (mt > lastCodeMtime) lastCodeMtime = mt;
+                        } catch (e2) { /* skip */ }
+                    }
+                }
+            } catch (e) { /* dir doesn't exist */ }
+        };
+        walkForMtime(scanRoot, 0);
+        const lastCodeUpdate = lastCodeMtime > 0 ? new Date(lastCodeMtime).toISOString() : null;
+        const daysSinceUpdate = lastCodeMtime > 0
+            ? Math.floor((Date.now() - lastCodeMtime) / (1000 * 60 * 60 * 24)) : null;
+
+        // ---- Dashboard: Feature flags from project_status.json ----
+        const ps = projectStatus || {};
+        const psf = ps.features || {};
+        const psm = ps.milestones || {};
+        const featureFlags = {
+            controllerSupport: psf.controllerSupport || 'unknown',
+            firstVisualUpgrade: psm.firstGraphicsPass !== undefined
+                ? (psm.firstGraphicsPass ? 'complete' : 'missing') : 'unknown',
+            achievements: psf.achievementsSystem || 'unknown',
+            testingScripts: psf.testScripts || 'unknown',
+            documentationComplete: (complianceMap['CLAUDE.md'] && complianceMap['game_direction.md'] && complianceMap['test_plan.md'])
+                ? 'complete' : (complianceMap['CLAUDE.md'] ? 'partial' : 'missing')
+        };
+
+        const dashboard = {
+            compliance: {
+                hasClaudeMd: complianceMap['CLAUDE.md'],
+                hasGameDirection: complianceMap['game_direction.md'],
+                hasTestPlan: complianceMap['test_plan.md'],
+                hasStatusHtml: complianceMap['status.html'],
+                hasGameConfig: complianceMap['game.config.json'],
+                hasProjectStatus: complianceMap['project_status.json'],
+                hasAchievements: complianceMap['achievements.json'],
+                hasAchievementsIntegration: complianceMap['achievements_integration.md'],
+                missingFiles: dashMissing,
+                complianceScore: complianceScore,
+                complianceTotal: 8
+            },
+            dates: {
+                lastCodeUpdate: lastCodeUpdate,
+                daysSinceUpdate: daysSinceUpdate,
+                lastStatusUpdate: ps.lastUpdated || null
+            },
+            featureFlags: featureFlags,
+            categoryCompletion: { graphics: null, gameplay: null, menus: null, controls: null, music: null }
+        };
+
         results.push({
             id: gameId,
             name: config.title || config.name || folderName,
@@ -281,7 +359,8 @@ function getGames(res) {
             tech: projectStatus ? projectStatus.tech : null,
             testingStatus: projectStatus ? projectStatus.testing : null,
             projectHealth: projectStatus ? projectStatus.health : null,
-            lastStatusUpdate: projectStatus ? projectStatus.lastUpdated : null
+            lastStatusUpdate: projectStatus ? projectStatus.lastUpdated : null,
+            dashboard: dashboard
         });
     }
 
