@@ -248,6 +248,9 @@
   #toast.info { background: rgba(0,212,255,0.92); color: #fff; }
 
   .loading { text-align: center; padding: 2.5rem; color: var(--text-dark); }
+
+  /* ---- Category column toggle ---- */
+  .cat-hidden .cat-col { display: none; }
 </style>
 </head>
 <body>
@@ -275,6 +278,7 @@
   <span class="chip" data-filter="compliance" data-value="gaps">Has Gaps</span>
   <span class="game-count" id="gameCount"></span>
   <span class="toolbar-spacer"></span>
+  <button id="toggleCatBtn">Hide Categories</button>
   <button id="runAllBtn">Run All Tests</button>
   <button id="refreshBtn" class="primary">Refresh</button>
 </div>
@@ -286,12 +290,12 @@
         <th class="gc" colspan="7">Core</th>
         <th class="gf" colspan="5">Features</th>
         <th class="gp" colspan="5">Compliance</th>
-        <th class="gk" colspan="5">Categories</th>
+        <th class="gk cat-col" colspan="5">Categories</th>
         <th class="gt" colspan="1">Tracking</th>
       </tr>
       <tr id="sortRow">
         <th data-sort="index" style="width:28px">#</th>
-        <th data-sort="name" class="al" style="width:270px">Game <span class="sa"></span></th>
+        <th data-sort="name" class="al" style="width:320px">Game <span class="sa"></span></th>
         <th data-sort="engine" style="width:78px">Engine <span class="sa"></span></th>
         <th data-sort="phase" style="width:70px">Phase <span class="sa"></span></th>
         <th data-sort="completion" style="width:80px">Comp% <span class="sa"></span></th>
@@ -307,11 +311,11 @@
         <th style="width:50px">Direction</th>
         <th style="width:50px">TestPlan</th>
         <th style="width:50px">status.html</th>
-        <th style="width:55px">Graphics</th>
-        <th style="width:55px">Gameplay</th>
-        <th style="width:55px">Menus</th>
-        <th style="width:55px">Controls</th>
-        <th style="width:55px">Music</th>
+        <th class="cat-col" style="width:55px">Graphics</th>
+        <th class="cat-col" style="width:55px">Gameplay</th>
+        <th class="cat-col" style="width:55px">Menus</th>
+        <th class="cat-col" style="width:55px">Controls</th>
+        <th class="cat-col" style="width:55px">Music</th>
         <th data-sort="lastUpdated" style="width:72px">Updated <span class="sa"></span></th>
       </tr>
     </thead>
@@ -473,11 +477,11 @@
       h += '<td>' + boolIcon(c.hasTestPlan) + '</td>';
       h += '<td>' + boolIcon(c.hasStatusHtml) + '</td>';
       /* Categories */
-      h += '<td>' + catCell(cat.graphics) + '</td>';
-      h += '<td>' + catCell(cat.gameplay) + '</td>';
-      h += '<td>' + catCell(cat.menus) + '</td>';
-      h += '<td>' + catCell(cat.controls) + '</td>';
-      h += '<td>' + catCell(cat.music) + '</td>';
+      h += '<td class="cat-col">' + catCell(cat.graphics) + '</td>';
+      h += '<td class="cat-col">' + catCell(cat.gameplay) + '</td>';
+      h += '<td class="cat-col">' + catCell(cat.menus) + '</td>';
+      h += '<td class="cat-col">' + catCell(cat.controls) + '</td>';
+      h += '<td class="cat-col">' + catCell(cat.music) + '</td>';
       /* Tracking */
       h += '<td>' + daysAgo(dt.daysSinceUpdate) + '</td>';
       h += '</tr>';
@@ -671,6 +675,13 @@
   searchInput.addEventListener('input', function() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(filterAndRender, 250);
+  });
+
+  /* ---- Toggle Categories columns ---- */
+  document.getElementById('toggleCatBtn').addEventListener('click', function() {
+    var table = document.querySelector('.table-wrap');
+    table.classList.toggle('cat-hidden');
+    this.textContent = table.classList.contains('cat-hidden') ? 'Show Categories' : 'Hide Categories';
   });
 
   /* ---- Run Tests (single game) ---- */
