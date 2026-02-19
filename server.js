@@ -29,7 +29,7 @@ const SCREENSHOTS_DIR = path.join(GAMES_DIR, 'screenshots');
    .git, screenshots) are excluded. */
 const NON_GAME_DIRS = new Set([
     '.claude', '.git', 'css', 'js', 'refImages', 'scripts',
-    'node_modules', 'screenshots'
+    'node_modules', 'screenshots', 'docs'
 ]);
 
 function discoverGameFolders() {
@@ -152,6 +152,13 @@ function getGames(res) {
             // No config file — use fallback data
         }
 
+        // Read project_status.json (structured portfolio metadata)
+        let projectStatus = null;
+        try {
+            const statusRaw = fs.readFileSync(path.join(folderPath, 'project_status.json'), 'utf8');
+            projectStatus = JSON.parse(statusRaw);
+        } catch (e) { /* No project_status.json */ }
+
         // Normalize engine info
         let engine = 'Unknown';
         let engineType = 'unknown';
@@ -267,7 +274,14 @@ function getGames(res) {
             launch: {
                 type: launchType,
                 projectDir: folderName
-            }
+            },
+            // Fields from project_status.json
+            features: projectStatus ? projectStatus.features : null,
+            milestones: projectStatus ? projectStatus.milestones : null,
+            tech: projectStatus ? projectStatus.tech : null,
+            testingStatus: projectStatus ? projectStatus.testing : null,
+            projectHealth: projectStatus ? projectStatus.health : null,
+            lastStatusUpdate: projectStatus ? projectStatus.lastUpdated : null
         });
     }
 

@@ -13,6 +13,7 @@ var Studio = (function () {
     var searchQuery = '';
     var genreFilter = 'all';
     var engineFilter = 'all';
+    var featureGapFilter = 'all';
     var sortBy = 'name';
     var gridFocusIndex = -1;
     var lastSelectedPerTab = {};
@@ -261,6 +262,8 @@ var Studio = (function () {
                     '<option value="completion">Completion</option>' +
                     '<option value="engine">Engine</option>' +
                     '<option value="phase">Phase</option>' +
+                    '<option value="lastUpdated">Last Updated</option>' +
+                    '<option value="missingFeatures">Missing Features</option>' +
                 '</select>' +
                 '<span class="game-count" id="studio-game-count"></span>' +
             '</div>' +
@@ -347,6 +350,26 @@ var Studio = (function () {
         }
         html += '</div></div>';
 
+        // Feature Gaps section
+        html += '<div class="filter-section" id="filter-feature-gaps">';
+        html += '<div class="filter-section-header" data-section="feature-gaps">';
+        html += '<span class="filter-section-label">Feature Gaps</span>';
+        html += '<span class="filter-section-chevron">\u25BC</span>';
+        html += '</div>';
+        html += '<div class="filter-section-items">';
+        for (var fg = 0; fg < FEATURE_GAP_MAP.length; fg++) {
+            var fgItem = FEATURE_GAP_MAP[fg];
+            var fgCount = fgItem.key === 'all' ? games.length : countFeatureGap(fgItem.key);
+            if (fgItem.key !== 'all' && fgCount === 0) continue;
+            var fgCls = 'filter-item' + (featureGapFilter === fgItem.key ? ' active' : '');
+            html += '<div class="' + fgCls + '" data-filter-type="feature-gap" data-filter-key="' + fgItem.key + '">';
+            html += '<span class="filter-item-icon">\u26A0</span>';
+            html += '<span class="filter-item-label">' + fgItem.label + '</span>';
+            html += '<span class="filter-item-count">' + fgCount + '</span>';
+            html += '</div>';
+        }
+        html += '</div></div>';
+
         sidebarFiltersEl.innerHTML = html;
 
         // Wire section collapse
@@ -365,6 +388,8 @@ var Studio = (function () {
                     engineFilter = key;
                 } else if (type === 'genre') {
                     genreFilter = key;
+                } else if (type === 'feature-gap') {
+                    featureGapFilter = key;
                 }
                 renderSidebar();
                 renderGameList();
@@ -414,6 +439,45 @@ var Studio = (function () {
         }
     }
 
+    /* ---- Feature gap helpers ---- */
+    var FEATURE_GAP_MAP = [
+        { key: 'all', label: 'All' },
+        { key: 'has-gaps', label: 'Has Gaps' },
+        { key: 'no-tests', label: 'No Tests' },
+        { key: 'no-save', label: 'No Save' },
+        { key: 'no-audio', label: 'No Audio' }
+    ];
+
+    function countMissingFeatures(game) {
+        if (!game.features) return 0;
+        var count = 0;
+        var keys = ['controllerSupport', 'achievementsSystem', 'testScripts', 'saveSystem', 'settingsMenu', 'audio', 'vfx'];
+        for (var i = 0; i < keys.length; i++) {
+            if (game.features[keys[i]] === 'missing') count++;
+        }
+        return count;
+    }
+
+    function matchesFeatureGap(game, key) {
+        if (key === 'all') return true;
+        if (!game.features) return false;
+        switch (key) {
+            case 'has-gaps': return countMissingFeatures(game) > 0;
+            case 'no-tests': return game.features.testScripts === 'missing';
+            case 'no-save': return game.features.saveSystem === 'missing';
+            case 'no-audio': return game.features.audio === 'missing';
+            default: return true;
+        }
+    }
+
+    function countFeatureGap(key) {
+        var count = 0;
+        for (var i = 0; i < games.length; i++) {
+            if (matchesFeatureGap(games[i], key)) count++;
+        }
+        return count;
+    }
+
     /* ============================================================
        GAME LIST — Filter, sort, render cards
        ============================================================ */
@@ -436,6 +500,9 @@ var Studio = (function () {
             // Genre filter
             if (genreFilter !== 'all' && !matchesGenre(g, genreFilter)) return false;
 
+            // Feature gap filter
+            if (featureGapFilter !== 'all' && !matchesFeatureGap(g, featureGapFilter)) return false;
+
             return true;
         });
 
@@ -448,6 +515,12 @@ var Studio = (function () {
                     return a.engine.localeCompare(b.engine);
                 case 'phase':
                     return a.phase.localeCompare(b.phase);
+                case 'lastUpdated':
+                    var da = a.lastStatusUpdate || '';
+                    var db = b.lastStatusUpdate || '';
+                    return db.localeCompare(da);
+                case 'missingFeatures':
+                    return countMissingFeatures(a) - countMissingFeatures(b);
                 default:
                     return a.name.localeCompare(b.name);
             }
@@ -545,8 +618,41 @@ var Studio = (function () {
                     '<div class="game-card-bar"><div class="game-card-bar-fill" style="width:' + game.completion + '%"></div></div>' +
                     '<span class="game-card-pct">' + game.completion + '%</span>' +
                 '</div>' +
+                renderFeatureDots(game) +
             '</div>' +
         '</div>';
+    }
+
+    /* ---- Feature dots on cards ---- */
+    var FEATURE_DOT_KEYS = [
+        { key: 'controllerSupport', label: 'Controller' },
+        { key: 'achievementsSystem', label: 'Achievements' },
+        { key: 'testScripts', label: 'Tests' },
+        { key: 'saveSystem', label: 'Save' },
+        { key: 'settingsMenu', label: 'Settings' },
+        { key: 'audio', label: 'Audio' },
+        { key: 'vfx', label: 'VFX' }
+    ];
+
+    function featureDotColor(value) {
+        switch (value) {
+            case 'complete': return 'dot-green';
+            case 'partial': return 'dot-yellow';
+            case 'missing': return 'dot-red';
+            default: return 'dot-gray';
+        }
+    }
+
+    function renderFeatureDots(game) {
+        if (!game.features) return '';
+        var html = '<div class="feature-dots">';
+        for (var i = 0; i < FEATURE_DOT_KEYS.length; i++) {
+            var fk = FEATURE_DOT_KEYS[i];
+            var val = game.features[fk.key] || 'unknown';
+            html += '<span class="feature-dot ' + featureDotColor(val) + '" title="' + fk.label + ': ' + val + '"></span>';
+        }
+        html += '</div>';
+        return html;
     }
 
     /* ============================================================
@@ -817,8 +923,8 @@ var Studio = (function () {
     }
 
     function renderTabBar(game, currentTab) {
-        var tabs = ['overview', 'commits', 'tests', 'devnotes', 'changelog', 'files'];
-        var tabLabels = { overview: 'Overview', commits: 'Commits', tests: 'Tests', devnotes: 'Dev Notes', changelog: 'Changelog', files: 'Files' };
+        var tabs = ['overview', 'status', 'commits', 'tests', 'devnotes', 'changelog', 'files'];
+        var tabLabels = { overview: 'Overview', status: 'Status', commits: 'Commits', tests: 'Tests', devnotes: 'Dev Notes', changelog: 'Changelog', files: 'Files' };
 
         var html = '<div class="studio-tabs">';
         for (var i = 0; i < tabs.length; i++) {
@@ -834,6 +940,8 @@ var Studio = (function () {
         switch (tab) {
             case 'overview':
                 return renderOverviewTab(game);
+            case 'status':
+                return renderStatusTab(game);
             case 'commits':
                 return '<div class="stub-message">Commit history will appear here</div>';
             case 'tests':
@@ -905,6 +1013,71 @@ var Studio = (function () {
                 '<div class="detail-card-value">' + escapeHtml(game.health.lastCommit || 'N/A') + '</div>' +
             '</div>' +
         '</div>';
+    }
+
+    function renderStatusTab(game) {
+        var html = '';
+
+        // Features section
+        html += '<div class="status-section">';
+        html += '<div class="status-section-title">Features</div>';
+        for (var i = 0; i < FEATURE_DOT_KEYS.length; i++) {
+            var fk = FEATURE_DOT_KEYS[i];
+            var val = game.features ? (game.features[fk.key] || 'unknown') : 'unknown';
+            var badgeClass = 'feature-badge badge-' + val;
+            html += '<div class="feature-row">';
+            html += '<span class="feature-row-label">' + fk.label + '</span>';
+            html += '<span class="' + badgeClass + '">' + val + '</span>';
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // Milestones section
+        html += '<div class="status-section">';
+        html += '<div class="status-section-title">Milestones</div>';
+        var milestoneLabels = {
+            firstGraphicsPass: 'First Graphics Pass',
+            controllerIntegration: 'Controller Integration',
+            coreGameplayLoop: 'Core Gameplay Loop',
+            verticalSlice: 'Vertical Slice',
+            contentComplete: 'Content Complete',
+            productionReady: 'Production Ready'
+        };
+        var milestoneKeys = ['firstGraphicsPass', 'controllerIntegration', 'coreGameplayLoop', 'verticalSlice', 'contentComplete', 'productionReady'];
+        for (var m = 0; m < milestoneKeys.length; m++) {
+            var mk = milestoneKeys[m];
+            var reached = game.milestones ? game.milestones[mk] : false;
+            html += '<div class="milestone-row">';
+            html += '<span class="milestone-check ' + (reached ? 'reached' : '') + '">' + (reached ? '\u2713' : '\u2014') + '</span>';
+            html += '<span class="milestone-label">' + milestoneLabels[mk] + '</span>';
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // Tech Stack section
+        html += '<div class="status-section">';
+        html += '<div class="status-section-title">Tech Stack</div>';
+        html += '<div class="detail-overview">';
+        html += '<div class="detail-card">';
+        html += '<div class="detail-card-label">Engine</div>';
+        html += '<div class="detail-card-value">' + escapeHtml(game.tech ? game.tech.engine + ' ' + game.tech.engineVersion : game.engine) + '</div>';
+        html += '</div>';
+        html += '<div class="detail-card">';
+        html += '<div class="detail-card-label">Languages</div>';
+        html += '<div class="detail-card-value">' + escapeHtml(game.tech ? game.tech.languages.join(', ') : 'Unknown') + '</div>';
+        html += '</div>';
+        html += '<div class="detail-card">';
+        html += '<div class="detail-card-label">Graphics</div>';
+        html += '<div class="detail-card-value">' + escapeHtml(game.tech ? game.tech.graphicsType : 'Unknown') + '</div>';
+        html += '</div>';
+        html += '<div class="detail-card">';
+        html += '<div class="detail-card-label">Build</div>';
+        html += '<div class="detail-card-value">' + escapeHtml(game.projectHealth ? game.projectHealth.buildVersion : game.version) + '</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+
+        return html;
     }
 
     function renderChangelogTab(game) {

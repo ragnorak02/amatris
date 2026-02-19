@@ -8,6 +8,7 @@
 !js/
 !refImages/
 !scripts/
+!docs/
 
 # And root-level launcher files
 !.gitignore
