@@ -1,7 +1,7 @@
 # Amatris — Studio OS
 
 ## Project Overview
-This is a game development portfolio containing a **web-based Studio OS launcher** and **11+ game projects** across multiple engines. The launcher serves as a data-dense development dashboard for browsing, launching, testing, and managing all games.
+This is a game development portfolio containing a **web-based Studio OS launcher** and **14 game projects** across multiple engines. The launcher serves as a data-dense development dashboard for browsing, launching, testing, and managing all games.
 
 ## Launcher (`Z:/Development/amatris/`)
 
@@ -28,8 +28,10 @@ Game projects live as subdirectories alongside the launcher files. The server au
 | `js/gamepad.js` | Xbox controller support — emits semantic actions via InputManager, context-aware routing |
 | `js/main.js` | Entry point — initializes all modules on DOMContentLoaded |
 | `css/style.css` | Core launcher styles (header, nav, background, fire-wolf logo, flame animation) |
-| `css/studio.css` | Studio dashboard — sidebar, portrait card grid, detail panel, file preview panel |
+| `css/studio.css` | Studio dashboard — sidebar, portrait card grid, detail panel, file preview panel, status styles |
 | `css/overlay.css` | Overlay + test result styles |
+| `docs/portfolio_schema.md` | Full `project_status.json` v1 schema documentation |
+| `scripts/validate_portfolio_status.js` | Validator for all `project_status.json` files (`node scripts/validate_portfolio_status.js`) |
 
 ### Architecture
 - **IIFE module pattern** — `InputManager`, `Studio`, `GameView`, `Overlay`, `FilePreview`, `TestRunner`, `Background`, `GamepadInput` are all `var X = (function() { ... })()`
@@ -39,7 +41,7 @@ Game projects live as subdirectories alongside the launcher files. The server au
   - Context stack: `pushContext(ctx)`, `popContext()`, `getContext()` — contexts: `launcher`, `detail_panel`, `gameplay`, `overlay`
   - Both keyboard (studio.js) and gamepad (gamepad.js) emit to the same bus
 - **Server API endpoints:**
-  - `GET /api/games` — all game metadata + live completion % from claude.md
+  - `GET /api/games` — all game metadata + live completion % from claude.md + project_status.json fields (features, milestones, tech, testingStatus, projectHealth, lastStatusUpdate)
   - `GET /api/file?path=...` — safe file content for preview (path-traversal protected)
   - `POST /api/tests/:gameId` — run tests for one game
   - `POST /api/tests/run-all` — sequential test execution for all games
@@ -48,15 +50,17 @@ Game projects live as subdirectories alongside the launcher files. The server au
   - `GET /close-game/:id` — kill running game process
   - `GET /system-stats` — CPU/RAM/disk usage
 - **Per-game config** via `game.config.json` in each game folder (varying schemas, normalized server-side)
+- **Per-game status** via `project_status.json` — structured feature/milestone/tech metadata (see `docs/portfolio_schema.md`)
 - **Godot path** in server.js: `C:\Users\nick\Downloads\Godot_v4.6-stable_win64.exe\Godot_v4.6-stable_win64.exe`
 
 ### Studio Dashboard Layout
-- **Sidebar** (`#studio-sidebar`, 220px): collapsible filter sections for Platforms (Godot/Unity/HTML5) and Genres (RPG/Action/Adventure/Strategy) with item counts
+- **Sidebar** (`#studio-sidebar`, 220px): collapsible filter sections for Platforms (Godot/Unity/HTML5), Genres (RPG/Action/Adventure/Strategy), and Feature Gaps (Has Gaps/No Tests/No Save/No Audio) with item counts
 - **Game Grid** (`#studio-game-list`): `repeat(auto-fill, minmax(180px, 1fr))` responsive portrait cards (~4-5/row at 1920px)
-- **Portrait Cards**: `aspect-ratio: 3/4`, gradient art + emoji icon, engine badge top-left, action buttons top-right (visible on hover/focus), bottom info strip (title, genre, 2px completion bar)
+- **Portrait Cards**: `aspect-ratio: 3/4`, gradient art + emoji icon, engine badge top-left, action buttons top-right (visible on hover/focus), bottom info strip (title, genre, 2px completion bar, 7 feature status dots)
 - **Selection**: gold border + scale(1.05) + glow, unselected cards dim to 0.8 opacity
-- **Toolbar**: search (debounced 250ms), sort dropdown, game count, Run All Tests, Refresh
-- **Detail panel**: slides in from right (420px), header banner + completion bar + tabs (Overview/Commits/Tests/Dev Notes/Changelog/Files)
+- **Toolbar**: search (debounced 250ms), sort dropdown (Name/Completion/Engine/Phase/Last Updated/Missing Features), game count, Run All Tests, Refresh
+- **Detail panel**: slides in from right (420px), header banner + completion bar + tabs (Overview/Status/Commits/Tests/Dev Notes/Changelog/Files)
+- **Status tab**: feature badges (complete/partial/missing/unknown), milestone checklist, tech stack cards
 - Running games show green border + pulsing "RUNNING" badge (polled every 3s)
 - SessionStorage cache for `/api/games` (30s TTL)
 
@@ -92,23 +96,38 @@ Store, Library, News, Mods, WIP, Patreon, Credits — "Library" activates the St
 
 Dashboard reads `claude.md` checkboxes from each game folder to calculate completion %.
 
-## Game Projects (11 total)
+## Game Projects (14 total)
 
 | # | Folder | Title | Engine | Genre |
 |---|--------|-------|--------|-------|
 | 1 | `Akma` | Akma | Godot 4.6 | Roguelite RPG |
 | 2 | `crystal3d` | Hybrid Nights | Godot 4.6 | 3D Action RPG |
-| 3 | `finalfantasy3d` | Korean Fantasy RPG | Godot 4.4 | Action RPG |
-| 4 | `fishing` | Isles of the Blue Current | Godot 4.6 | Fishing Adventure |
-| 5 | `Hwarang's Path` | Hwarang's Path | Unity 6 | Turn-based RPG |
-| 6 | `kingdomDefense` | Korean Fantasy TD | Godot 4.6 | Tower Defense |
-| 7 | `mechWar` | MechWar | Godot 4.6 | Isometric Mech Tactics |
-| 8 | `monsterBattle` | Monster Catcher | Godot 4.6 | Monster RPG |
-| 9 | `pocketDragon` | Dragon League | Godot 4.4 | Dragon-battling RPG |
-| 10 | `smashLand` | SmashLand | Godot 4.6 | Platform Fighter |
-| 11 | `zelda` | Zelda | HTML5/JS | Action Adventure |
+| 3 | `drift` | Loop Drift Racer | Godot 4.4 | Racing |
+| 4 | `finalfantasy3d` | Korean Fantasy RPG | Godot 4.4 | Action RPG |
+| 5 | `fishing` | Isles of the Blue Current | Godot 4.6 | Fishing Adventure |
+| 6 | `Hwarang's Path` | Hwarang's Path | Unity 6 | Turn-based RPG |
+| 7 | `kingdomDefense` | Korean Fantasy TD | Godot 4.6 | Tower Defense |
+| 8 | `lastFantasy` | Last Fantasy | Godot 4.6 | Turn-based JRPG |
+| 9 | `mechWar` | MechWar | Godot 4.6 | Isometric Mech Tactics |
+| 10 | `monsterBattle` | Monster Catcher | Godot 4.6 | Monster RPG |
+| 11 | `pocketDragon` | Dragon League | Godot 4.4 | Dragon-battling RPG |
+| 12 | `rythemWar` | RhythmWar | Godot 4.6 | Rhythm / Strategy |
+| 13 | `smashLand` | SmashLand | Godot 4.6 | Platform Fighter |
+| 14 | `zelda` | Zelda | HTML5/JS | Action Adventure |
 
-Each game has its own `claude.md`/`CLAUDE.md` with detailed architecture docs and a `game.config.json` for launcher metadata. **Always read the game's CLAUDE.md before making changes to that game.**
+Each game has its own `claude.md`/`CLAUDE.md` with detailed architecture docs, a `game.config.json` for launcher metadata, and a `project_status.json` for structured feature/milestone tracking. **Always read the game's CLAUDE.md before making changes to that game.**
+
+## Project Status Schema
+
+Each game folder contains a `project_status.json` (v1 schema, documented in `docs/portfolio_schema.md`):
+- **Features** (7 keys, 4-level enum: `unknown|missing|partial|complete`): controllerSupport, achievementsSystem, testScripts, saveSystem, settingsMenu, audio, vfx
+- **Milestones** (6 booleans): firstGraphicsPass, controllerIntegration, coreGameplayLoop, verticalSlice, contentComplete, productionReady
+- **Tech**: engine, engineVersion, languages[], graphicsType
+- **Health**: progressPercent (0-100), buildVersion, assetStage
+- **Testing**: testCommand, lastRunAt, status, notes
+- Server merges into `/api/games` response as `features`, `milestones`, `tech`, `testingStatus`, `projectHealth`, `lastStatusUpdate`
+- Validate all: `node scripts/validate_portfolio_status.js`
+- Extension rules: only ADD fields, never rename/remove in v1
 
 ## Test Contract
 - **Standard location:** `{game}/tests/run-tests.(gd|mjs|bat|sh)`
@@ -130,7 +149,7 @@ Each game has its own `claude.md`/`CLAUDE.md` with detailed architecture docs an
 - Godot games: if adding `class_name` scripts, run `--headless --import` first
 
 ### When Editing the Launcher
-- Game metadata comes from `game.config.json` per game folder — normalized by server.js `/api/games`
+- Game metadata comes from `game.config.json` + `project_status.json` per game folder — normalized by server.js `/api/games`
 - Studio.js fetches from `/api/games` — no hardcoded game data in client JS
 - File preview validates paths server-side — never serves files outside GAMES_DIR
 - **InputManager** must load before all other scripts (first `<script>` tag after stylesheets)
