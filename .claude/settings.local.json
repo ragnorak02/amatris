@@ -39,7 +39,17 @@
       "Bash(powershell -NoProfile -Command:*)",
       "Bash(while read d)",
       "Bash(do basename \"$d\")",
-      "Bash(git remote add:*)"
+      "Bash(git remote add:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(powershell -Command \"Test-Path ''Z:\\\\Development\\\\amatris\\\\Akma\\\\project_status.json''\")",
+      "Bash(powershell -Command:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(for dir in Z:/Development/amatris/{Akma,crystal3d,drift,finalfantasy3d,fishing,Hwarang''s Path,kingdomDefense,lastFantasy,mechWar,monsterBattle,pocketDragon,rythemWar,smashLand,zelda})",
+      "Bash(if [ -f \"$dir/project_status.json\" ])",
+      "Bash(then)",
+      "Bash(else)",
+      "Bash(fi)",
+      "Bash(git status:*)"
     ]
   }
 }
