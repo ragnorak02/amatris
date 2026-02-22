@@ -105,7 +105,7 @@
     max-width: 1800px; margin: 0 auto;
   }
   table {
-    width: 100%; min-width: 1600px; border-collapse: collapse;
+    width: 100%; border-collapse: collapse;
     font-size: 0.8rem;
   }
 
@@ -201,7 +201,7 @@
     background: #0d0b18; padding: 1rem; cursor: default;
     white-space: normal; border-bottom: 2px solid var(--gold);
   }
-  .ex-content { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; max-width: 1200px; }
+  .ex-content { display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 1.2rem; }
   .ex-section h4 {
     color: var(--gold); font-size: 0.76rem; margin-bottom: 0.4rem;
     text-transform: uppercase; letter-spacing: 0.04em;
@@ -255,8 +255,40 @@
   }
   .th-resize-handle:hover, .th-resize-handle.active { background: var(--gold); opacity: 0.6; }
 
-  /* ---- Category column toggle ---- */
-  .cat-hidden .cat-col { display: none; }
+  /* ---- Column group toggles ---- */
+  .hide-core .core-col { display: none; }
+  .hide-feat .feat-col { display: none; }
+  .hide-comp .comp-col { display: none; }
+  .hide-cat .cat-col { display: none; }
+  .hide-track .track-col { display: none; }
+
+  /* ---- Group toggle circles ---- */
+  .group-toggles {
+    display: flex; align-items: center; gap: 0.35rem;
+    margin-left: 0.3rem;
+  }
+  .group-toggles .gt-label {
+    font-size: 0.62rem; color: var(--text-dark); text-transform: uppercase;
+    letter-spacing: 0.04em; margin-right: 0.1rem;
+  }
+  .gtog {
+    width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+    border: 2px solid; display: flex; align-items: center; justify-content: center;
+    font-size: 0.52rem; font-weight: 700; transition: all 0.15s;
+    user-select: none; background: transparent;
+  }
+  .gtog:hover { transform: scale(1.15); }
+  .gtog.off { opacity: 0.3; }
+  .gtog-core { border-color: var(--gold); color: var(--gold); }
+  .gtog-core:not(.off) { background: rgba(212,175,55,0.15); }
+  .gtog-feat { border-color: var(--cyan); color: var(--cyan); }
+  .gtog-feat:not(.off) { background: rgba(0,212,255,0.15); }
+  .gtog-comp { border-color: var(--orange); color: var(--orange); }
+  .gtog-comp:not(.off) { background: rgba(249,115,22,0.15); }
+  .gtog-cat { border-color: var(--purple); color: var(--purple); }
+  .gtog-cat:not(.off) { background: rgba(167,139,250,0.15); }
+  .gtog-track { border-color: var(--green); color: var(--green); }
+  .gtog-track:not(.off) { background: rgba(34,197,94,0.15); }
 </style>
 </head>
 <body>
@@ -282,7 +314,14 @@
   <span class="chip" data-filter="compliance" data-value="gaps">Has Gaps</span>
   <span class="game-count" id="gameCount"></span>
   <span class="toolbar-spacer"></span>
-  <button id="toggleCatBtn">Hide Categories</button>
+  <div class="group-toggles">
+    <span class="gt-label">Columns</span>
+    <div class="gtog gtog-core" data-group="core" title="Core">C</div>
+    <div class="gtog gtog-feat" data-group="feat" title="Features">F</div>
+    <div class="gtog gtog-comp" data-group="comp" title="Compliance">P</div>
+    <div class="gtog gtog-cat off" data-group="cat" title="Categories">K</div>
+    <div class="gtog gtog-track" data-group="track" title="Tracking">T</div>
+  </div>
   <button id="runAllBtn">Run All Tests</button>
   <button id="refreshBtn" class="primary">Refresh</button>
 </div>
@@ -291,41 +330,44 @@
   <table>
     <thead>
       <tr>
-        <th class="gc" colspan="8">Core</th>
-        <th class="gf" colspan="5">Features</th>
-        <th class="gp" colspan="5">Compliance</th>
+        <th colspan="3"></th>
+        <th class="gc core-col" colspan="5">Core</th>
+        <th class="gf feat-col" colspan="5">Features</th>
+        <th class="gp comp-col" colspan="5">Compliance</th>
         <th class="gk cat-col" colspan="5">Categories</th>
-        <th class="gt" colspan="1">Tracking</th>
+        <th class="gt track-col" colspan="3">Tracking</th>
       </tr>
       <tr id="sortRow">
-        <th data-sort="index" style="width:28px">#</th>
-        <th style="width:32px"></th>
-        <th data-sort="name" class="al" style="width:360px">Game <span class="sa"></span></th>
-        <th data-sort="engine" style="width:78px">Engine <span class="sa"></span></th>
-        <th data-sort="phase" style="width:70px">Phase <span class="sa"></span></th>
-        <th data-sort="completion" style="width:80px">Comp% <span class="sa"></span></th>
-        <th data-sort="status" style="width:52px">Status</th>
-        <th class="al" style="width:92px">Next Step</th>
-        <th data-sort="controllerSupport" style="width:54px">Controller</th>
-        <th data-sort="firstVisualUpgrade" style="width:54px">1st Visual</th>
-        <th data-sort="achievements" style="width:54px">Achieve.</th>
-        <th data-sort="testingScripts" style="width:54px">Tests</th>
-        <th data-sort="documentationComplete" style="width:54px">Docs</th>
-        <th data-sort="complianceScore" style="width:52px">Score <span class="sa"></span></th>
-        <th style="width:50px">CLAUDE</th>
-        <th style="width:50px">Direction</th>
-        <th style="width:50px">TestPlan</th>
-        <th style="width:50px">status.html</th>
-        <th class="cat-col" style="width:55px">Graphics</th>
-        <th class="cat-col" style="width:55px">Gameplay</th>
-        <th class="cat-col" style="width:55px">Menus</th>
-        <th class="cat-col" style="width:55px">Controls</th>
-        <th class="cat-col" style="width:55px">Music</th>
-        <th data-sort="lastUpdated" style="width:72px">Updated <span class="sa"></span></th>
+        <th data-sort="index" style="width:26px">#</th>
+        <th style="width:28px"></th>
+        <th data-sort="name" class="al" style="width:180px">Game <span class="sa"></span></th>
+        <th data-sort="engine" class="core-col" style="width:70px">Engine <span class="sa"></span></th>
+        <th data-sort="phase" class="core-col" style="width:65px">Phase <span class="sa"></span></th>
+        <th data-sort="completion" class="core-col" style="width:72px">Comp% <span class="sa"></span></th>
+        <th data-sort="status" class="core-col" style="width:46px">Status</th>
+        <th class="al core-col" style="width:80px">Next Step</th>
+        <th data-sort="controllerSupport" class="feat-col" style="width:42px">Ctrl</th>
+        <th data-sort="firstVisualUpgrade" class="feat-col" style="width:42px">Visual</th>
+        <th data-sort="achievements" class="feat-col" style="width:42px">Achv.</th>
+        <th data-sort="testingScripts" class="feat-col" style="width:42px">Tests</th>
+        <th data-sort="documentationComplete" class="feat-col" style="width:42px">Docs</th>
+        <th data-sort="complianceScore" class="comp-col" style="width:46px">Score <span class="sa"></span></th>
+        <th class="comp-col" style="width:40px">CL</th>
+        <th class="comp-col" style="width:40px">Dir</th>
+        <th class="comp-col" style="width:40px">Test</th>
+        <th class="comp-col" style="width:40px">Stat</th>
+        <th class="cat-col" style="width:48px">Gfx</th>
+        <th class="cat-col" style="width:48px">Play</th>
+        <th class="cat-col" style="width:48px">Menu</th>
+        <th class="cat-col" style="width:48px">Ctrl</th>
+        <th class="cat-col" style="width:48px">Music</th>
+        <th data-sort="lastEditFile" class="al track-col" style="width:110px">Last Edit <span class="sa"></span></th>
+        <th class="al track-col" style="width:160px">Last Change</th>
+        <th data-sort="lastUpdated" class="track-col" style="width:110px">Updated <span class="sa"></span></th>
       </tr>
     </thead>
     <tbody id="tBody">
-      <tr><td colspan="24" class="loading">Loading game data...</td></tr>
+      <tr><td colspan="26" class="loading">Loading game data...</td></tr>
     </tbody>
   </table>
 </div>
@@ -356,7 +398,7 @@
       return data;
     }).catch(function(err) {
       console.error('[Dashboard] Fetch failed:', err);
-      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="26" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
       return [];
     });
   }
@@ -419,6 +461,34 @@
     return '<span class="' + c + '">' + d + 'd</span>';
   }
 
+  function fmtTimestamp(iso) {
+    if (!iso) return '<span class="iu">\u2014</span>';
+    var d = new Date(iso);
+    var now = Date.now();
+    var diffMs = now - d.getTime();
+    var days = Math.floor(diffMs / 86400000);
+    var c = days <= 7 ? 'dg' : days <= 30 ? 'dy' : 'dr';
+    var mo = d.getMonth() + 1;
+    var dy = d.getDate();
+    var hr = d.getHours();
+    var mn = String(d.getMinutes()).padStart(2, '0');
+    var ampm = hr >= 12 ? 'pm' : 'am';
+    var hr12 = hr % 12 || 12;
+    return '<span class="' + c + '">' + mo + '/' + dy + ' ' + hr12 + ':' + mn + ampm + '</span>';
+  }
+
+  function fmtEditFile(f) {
+    if (!f) return '<span class="iu">\u2014</span>';
+    var name = f.indexOf('/') !== -1 ? f.substring(f.lastIndexOf('/') + 1) : f;
+    return '<span style="font-size:0.68rem;color:var(--text-dim)" title="' + esc(f) + '">' + esc(name) + '</span>';
+  }
+
+  function fmtCommitMsg(msg) {
+    if (!msg) return '<span class="iu">\u2014</span>';
+    var short = msg.length > 28 ? msg.substring(0, 26) + '\u2026' : msg;
+    return '<span style="font-size:0.66rem;color:var(--text-dim)" title="' + esc(msg) + '">' + esc(short) + '</span>';
+  }
+
   function engCls(t) { return t === 'godot' ? 'eg' : t === 'unity' ? 'eu' : t === 'html' ? 'eh' : ''; }
 
   function phsCls(p) {
@@ -444,7 +514,7 @@
   function renderTable(games) {
     gcEl.textContent = games.length + ' game' + (games.length !== 1 ? 's' : '');
     if (!games.length) {
-      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="26" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
       return;
     }
     var h = '';
@@ -457,7 +527,7 @@
       var ex = expandedId === g.id;
 
       h += '<tr data-id="' + g.id + '" class="game-row">';
-      /* Core */
+      /* Always visible */
       h += '<td class="ci">' + (i + 1) + '</td>';
       h += '<td><button class="play-btn" data-game="' + g.id + '" data-name="' + esc(g.name) + '" title="Launch ' + esc(g.name) + '">\u25B6</button></td>';
       h += '<td class="al cn">' + esc(g.name);
@@ -465,23 +535,24 @@
         h += '<span class="mpill" title="Missing: ' + esc(c.missingFiles.join(', ')) + '">' + c.missingFiles.length + ' gaps</span>';
       }
       h += '</td>';
-      h += '<td class="' + engCls(g.engineType) + '">' + esc(g.engine) + '</td>';
-      h += '<td class="' + phsCls(g.phase) + '">' + esc(g.phase) + '</td>';
-      h += '<td>' + compBar(g.completion || 0) + '</td>';
-      h += '<td><span class="sa-' + g.status + '">' + esc(g.status) + '</span></td>';
-      h += '<td class="al" style="font-size:0.68rem;color:var(--text-dim)">' + nextStep(g) + '</td>';
+      /* Core */
+      h += '<td class="core-col ' + engCls(g.engineType) + '">' + esc(g.engine) + '</td>';
+      h += '<td class="core-col ' + phsCls(g.phase) + '">' + esc(g.phase) + '</td>';
+      h += '<td class="core-col">' + compBar(g.completion || 0) + '</td>';
+      h += '<td class="core-col"><span class="sa-' + g.status + '">' + esc(g.status) + '</span></td>';
+      h += '<td class="al core-col" style="font-size:0.68rem;color:var(--text-dim)">' + nextStep(g) + '</td>';
       /* Features */
-      h += '<td>' + triIcon(f.controllerSupport) + '</td>';
-      h += '<td>' + triIcon(f.firstVisualUpgrade) + '</td>';
-      h += '<td>' + triIcon(f.achievements) + '</td>';
-      h += '<td>' + triIcon(f.testingScripts) + '</td>';
-      h += '<td>' + triIcon(f.documentationComplete) + '</td>';
+      h += '<td class="feat-col">' + triIcon(f.controllerSupport) + '</td>';
+      h += '<td class="feat-col">' + triIcon(f.firstVisualUpgrade) + '</td>';
+      h += '<td class="feat-col">' + triIcon(f.achievements) + '</td>';
+      h += '<td class="feat-col">' + triIcon(f.testingScripts) + '</td>';
+      h += '<td class="feat-col">' + triIcon(f.documentationComplete) + '</td>';
       /* Compliance */
-      h += '<td>' + cBadge(c.complianceScore || 0, c.complianceTotal || 8) + '</td>';
-      h += '<td>' + boolIcon(c.hasClaudeMd) + '</td>';
-      h += '<td>' + boolIcon(c.hasGameDirection) + '</td>';
-      h += '<td>' + boolIcon(c.hasTestPlan) + '</td>';
-      h += '<td>' + boolIcon(c.hasStatusHtml) + '</td>';
+      h += '<td class="comp-col">' + cBadge(c.complianceScore || 0, c.complianceTotal || 8) + '</td>';
+      h += '<td class="comp-col">' + boolIcon(c.hasClaudeMd) + '</td>';
+      h += '<td class="comp-col">' + boolIcon(c.hasGameDirection) + '</td>';
+      h += '<td class="comp-col">' + boolIcon(c.hasTestPlan) + '</td>';
+      h += '<td class="comp-col">' + boolIcon(c.hasStatusHtml) + '</td>';
       /* Categories */
       h += '<td class="cat-col">' + catCell(cat.graphics) + '</td>';
       h += '<td class="cat-col">' + catCell(cat.gameplay) + '</td>';
@@ -489,7 +560,9 @@
       h += '<td class="cat-col">' + catCell(cat.controls) + '</td>';
       h += '<td class="cat-col">' + catCell(cat.music) + '</td>';
       /* Tracking */
-      h += '<td>' + daysAgo(dt.daysSinceUpdate) + '</td>';
+      h += '<td class="al track-col">' + fmtEditFile(dt.lastCodeFile) + '</td>';
+      h += '<td class="al track-col">' + fmtCommitMsg(dt.lastCommitMsg) + '</td>';
+      h += '<td class="track-col">' + fmtTimestamp(dt.lastCodeUpdate) + '</td>';
       h += '</tr>';
 
       if (ex) h += buildExpand(g);
@@ -505,7 +578,7 @@
     var tech = g.tech || {};
     var ts = g.testingStatus || {};
 
-    var h = '<tr class="expand-row"><td colspan="24"><div class="ex-content">';
+    var h = '<tr class="expand-row"><td colspan="26"><div class="ex-content">';
 
     /* Left: compliance grid */
     h += '<div class="ex-section"><h4>File Compliance (' + (c.complianceScore || 0) + '/8)</h4><div class="ex-grid">';
@@ -542,6 +615,33 @@
     h += '<div id="tr-' + g.id + '"></div>';
     h += '</div>';
 
+    /* Recent Changes (4th column) */
+    var dt = d.dates || {};
+    var commits = dt.recentCommits || [];
+    h += '<div class="ex-section"><h4>Recent Changes</h4>';
+    if (commits.length > 0) {
+      commits.forEach(function(cm) {
+        var cDate = '';
+        if (cm.date) {
+          var dd = new Date(cm.date);
+          var cmo = dd.getMonth() + 1;
+          var cdy = dd.getDate();
+          var chr = dd.getHours();
+          var cmn = String(dd.getMinutes()).padStart(2, '0');
+          var campm = chr >= 12 ? 'pm' : 'am';
+          var chr12 = chr % 12 || 12;
+          cDate = cmo + '/' + cdy + ' ' + chr12 + ':' + cmn + campm;
+        }
+        h += '<div style="display:flex;gap:0.5rem;align-items:baseline;padding:0.15rem 0;font-size:0.7rem;border-bottom:1px solid rgba(42,37,69,0.5)">';
+        h += '<span style="color:var(--text-dark);flex-shrink:0;min-width:80px;font-size:0.65rem">' + esc(cDate) + '</span>';
+        h += '<span style="color:var(--text);white-space:normal">' + esc(cm.message) + '</span>';
+        h += '</div>';
+      });
+    } else {
+      h += '<div class="ex-item">No git history</div>';
+    }
+    h += '</div>';
+
     h += '</div>'; /* end ex-content */
 
     /* Actions */
@@ -568,6 +668,7 @@
       case 'status': return g.status || '';
       case 'complianceScore': return d.compliance ? d.compliance.complianceScore : 0;
       case 'lastUpdated': return d.dates && d.dates.daysSinceUpdate !== null ? d.dates.daysSinceUpdate : 99999;
+      case 'lastEditFile': return d.dates && d.dates.lastCodeFile ? d.dates.lastCodeFile.toLowerCase() : 'zzz';
       case 'controllerSupport':
       case 'firstVisualUpgrade':
       case 'achievements':
@@ -689,12 +790,19 @@
     searchTimer = setTimeout(filterAndRender, 250);
   });
 
-  /* ---- Toggle Categories columns ---- */
-  document.getElementById('toggleCatBtn').addEventListener('click', function() {
-    var table = document.querySelector('.table-wrap');
-    table.classList.toggle('cat-hidden');
-    this.textContent = table.classList.contains('cat-hidden') ? 'Show Categories' : 'Hide Categories';
-  });
+  /* ---- Group column toggles ---- */
+  var tableWrap = document.querySelector('.table-wrap');
+  // Categories hidden by default
+  tableWrap.classList.add('hide-cat');
+
+  var gtogs = document.querySelectorAll('.gtog');
+  for (var gi = 0; gi < gtogs.length; gi++) {
+    gtogs[gi].addEventListener('click', function() {
+      var grp = this.getAttribute('data-group');
+      this.classList.toggle('off');
+      tableWrap.classList.toggle('hide-' + grp);
+    });
+  }
 
   /* ---- Run Tests (single game) ---- */
   window._runTest = function(gameId) {
@@ -739,7 +847,7 @@
 
   /* ---- Refresh ---- */
   document.getElementById('refreshBtn').addEventListener('click', function() {
-    tbody.innerHTML = '<tr><td colspan="24" class="loading">Refreshing...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="26" class="loading">Refreshing...</td></tr>';
     loadData().then(function(games) { allGames = games; filterAndRender(); });
   });
 

@@ -11,7 +11,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { exec, execFile } = require('child_process');
+const { exec, execFile, execSync } = require('child_process');
 
 const PORT = 3000;
 const IS_PKG = typeof process.pkg !== 'undefined';
@@ -271,6 +271,7 @@ function getGames(res) {
         const projSub = (config.launch && config.launch.projectSubdir) || '';
         const scanRoot = projSub ? path.join(folderPath, projSub) : folderPath;
         let lastCodeMtime = 0;
+        let lastCodeFile = null;
         const walkForMtime = (dir, depth) => {
             if (depth > 4) return;
             try {
@@ -280,8 +281,12 @@ function getGames(res) {
                         if (!skipDirs.has(de.name)) walkForMtime(path.join(dir, de.name), depth + 1);
                     } else if (de.isFile() && codeExts.has(path.extname(de.name).toLowerCase())) {
                         try {
-                            const mt = fs.statSync(path.join(dir, de.name)).mtimeMs;
-                            if (mt > lastCodeMtime) lastCodeMtime = mt;
+                            const fullFilePath = path.join(dir, de.name);
+                            const mt = fs.statSync(fullFilePath).mtimeMs;
+                            if (mt > lastCodeMtime) {
+                                lastCodeMtime = mt;
+                                lastCodeFile = path.relative(scanRoot, fullFilePath).replace(/\\/g, '/');
+                            }
                         } catch (e2) { /* skip */ }
                     }
                 }
@@ -291,6 +296,27 @@ function getGames(res) {
         const lastCodeUpdate = lastCodeMtime > 0 ? new Date(lastCodeMtime).toISOString() : null;
         const daysSinceUpdate = lastCodeMtime > 0
             ? Math.floor((Date.now() - lastCodeMtime) / (1000 * 60 * 60 * 24)) : null;
+
+        // ---- Dashboard: Last git commit messages ----
+        let lastCommitMsg = null;
+        let recentCommits = [];
+        try {
+            const gitDir = path.join(folderPath, '.git');
+            if (fs.existsSync(gitDir)) {
+                const logOutput = execSync('git log -5 --format="%H||%aI||%s"', {
+                    cwd: folderPath, timeout: 3000, encoding: 'utf8',
+                    shell: true
+                }).trim();
+                if (logOutput) {
+                    const lines = logOutput.split('\n');
+                    lastCommitMsg = lines[0].split('||')[2] || null;
+                    recentCommits = lines.map(function(line) {
+                        const parts = line.split('||');
+                        return { hash: (parts[0] || '').substring(0, 7), date: parts[1] || null, message: parts[2] || '' };
+                    });
+                }
+            }
+        } catch (e) { /* no git repo or git not available */ }
 
         // ---- Dashboard: Feature flags from project_status.json ----
         const ps = projectStatus || {};
@@ -323,6 +349,9 @@ function getGames(res) {
             dates: {
                 lastCodeUpdate: lastCodeUpdate,
                 daysSinceUpdate: daysSinceUpdate,
+                lastCodeFile: lastCodeFile,
+                lastCommitMsg: lastCommitMsg,
+                recentCommits: recentCommits,
                 lastStatusUpdate: ps.lastUpdated || null
             },
             featureFlags: featureFlags,

@@ -114,7 +114,7 @@
     max-width: 1800px; margin: 0 auto;
   }
   table {
-    width: 100%; min-width: 1600px; border-collapse: collapse;
+    width: 100%; min-width: 1870px; border-collapse: collapse;
     font-size: 0.8rem;
   }
 
@@ -306,7 +306,7 @@
         <th class="gf" colspan="5">Features</th>
         <th class="gp" colspan="5">Compliance</th>
         <th class="gk cat-col" colspan="5">Categories</th>
-        <th class="gt" colspan="1">Tracking</th>
+        <th class="gt" colspan="3">Tracking</th>
       </tr>
       <tr id="sortRow">
         <th data-sort="index" style="width:28px">#</th>
@@ -332,11 +332,13 @@
         <th class="cat-col" style="width:55px">Menus</th>
         <th class="cat-col" style="width:55px">Controls</th>
         <th class="cat-col" style="width:55px">Music</th>
-        <th data-sort="lastUpdated" style="width:72px">Updated <span class="sa"></span></th>
+        <th data-sort="lastEditFile" class="al" style="width:140px">Last Edit <span class="sa"></span></th>
+        <th data-sort="lastChangeType" class="al" style="width:110px">Change <span class="sa"></span></th>
+        <th data-sort="lastUpdated" style="width:140px">Updated <span class="sa"></span></th>
       </tr>
     </thead>
     <tbody id="tBody">
-      <tr><td colspan="24" class="loading">Loading game data...</td></tr>
+      <tr><td colspan="26" class="loading">Loading game data...</td></tr>
     </tbody>
   </table>
 </div>
@@ -367,7 +369,7 @@
       return data;
     }).catch(function(err) {
       console.error('[Dashboard] Fetch failed:', err);
-      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="26" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
       return [];
     });
   }
@@ -430,6 +432,42 @@
     return '<span class="' + c + '">' + d + 'd</span>';
   }
 
+  function fmtTimestamp(iso) {
+    if (!iso) return '<span class="iu">\u2014</span>';
+    var d = new Date(iso);
+    var now = Date.now();
+    var diffMs = now - d.getTime();
+    var days = Math.floor(diffMs / 86400000);
+    var c = days <= 7 ? 'dg' : days <= 30 ? 'dy' : 'dr';
+    var mo = d.getMonth() + 1;
+    var dy = d.getDate();
+    var hr = d.getHours();
+    var mn = String(d.getMinutes()).padStart(2, '0');
+    var ampm = hr >= 12 ? 'pm' : 'am';
+    var hr12 = hr % 12 || 12;
+    return '<span class="' + c + '">' + mo + '/' + dy + ' ' + hr12 + ':' + mn + ampm + '</span>';
+  }
+
+  function fmtEditFile(f) {
+    if (!f) return '<span class="iu">\u2014</span>';
+    var name = f.indexOf('/') !== -1 ? f.substring(f.lastIndexOf('/') + 1) : f;
+    return '<span style="font-size:0.68rem;color:var(--text-dim)" title="' + esc(f) + '">' + esc(name) + '</span>';
+  }
+
+  function fmtChangeType(f) {
+    if (!f) return '<span class="iu">\u2014</span>';
+    var ext = f.lastIndexOf('.') !== -1 ? f.substring(f.lastIndexOf('.')).toLowerCase() : '';
+    var label = 'File Edit';
+    var clr = 'var(--text-dim)';
+    if (ext === '.gd') { label = 'Script'; clr = 'var(--cyan)'; }
+    else if (ext === '.cs') { label = 'Script'; clr = 'var(--cyan)'; }
+    else if (ext === '.js') { label = 'Script'; clr = 'var(--cyan)'; }
+    else if (ext === '.tscn') { label = 'Scene'; clr = 'var(--purple)'; }
+    else if (ext === '.tres') { label = 'Resource'; clr = 'var(--orange)'; }
+    else if (ext === '.gdshader') { label = 'Shader'; clr = 'var(--green)'; }
+    return '<span style="font-size:0.68rem;color:' + clr + '">' + label + '</span>';
+  }
+
   function engCls(t) { return t === 'godot' ? 'eg' : t === 'unity' ? 'eu' : t === 'html' ? 'eh' : ''; }
 
   function phsCls(p) {
@@ -455,7 +493,7 @@
   function renderTable(games) {
     gcEl.textContent = games.length + ' game' + (games.length !== 1 ? 's' : '');
     if (!games.length) {
-      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="26" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
       return;
     }
     var h = '';
@@ -500,7 +538,9 @@
       h += '<td class="cat-col">' + catCell(cat.controls) + '</td>';
       h += '<td class="cat-col">' + catCell(cat.music) + '</td>';
       /* Tracking */
-      h += '<td>' + daysAgo(dt.daysSinceUpdate) + '</td>';
+      h += '<td class="al">' + fmtEditFile(dt.lastCodeFile) + '</td>';
+      h += '<td class="al">' + fmtChangeType(dt.lastCodeFile) + '</td>';
+      h += '<td>' + fmtTimestamp(dt.lastCodeUpdate) + '</td>';
       h += '</tr>';
 
       if (ex) h += buildExpand(g);
@@ -516,7 +556,7 @@
     var tech = g.tech || {};
     var ts = g.testingStatus || {};
 
-    var h = '<tr class="expand-row"><td colspan="24"><div class="ex-content">';
+    var h = '<tr class="expand-row"><td colspan="26"><div class="ex-content">';
 
     /* Left: compliance grid */
     h += '<div class="ex-section"><h4>File Compliance (' + (c.complianceScore || 0) + '/8)</h4><div class="ex-grid">';
@@ -581,6 +621,11 @@
       case 'status': return g.status || '';
       case 'complianceScore': return d.compliance ? d.compliance.complianceScore : 0;
       case 'lastUpdated': return d.dates && d.dates.daysSinceUpdate !== null ? d.dates.daysSinceUpdate : 99999;
+      case 'lastEditFile': return d.dates && d.dates.lastCodeFile ? d.dates.lastCodeFile.toLowerCase() : 'zzz';
+      case 'lastChangeType':
+        var lcf = d.dates && d.dates.lastCodeFile ? d.dates.lastCodeFile : '';
+        var lcExt = lcf.lastIndexOf('.') !== -1 ? lcf.substring(lcf.lastIndexOf('.')) : '';
+        return lcExt || 'zzz';
       case 'controllerSupport':
       case 'firstVisualUpgrade':
       case 'achievements':
@@ -752,7 +797,7 @@
 
   /* ---- Refresh ---- */
   document.getElementById('refreshBtn').addEventListener('click', function() {
-    tbody.innerHTML = '<tr><td colspan="24" class="loading">Refreshing...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="26" class="loading">Refreshing...</td></tr>';
     loadData().then(function(games) { allGames = games; filterAndRender(); });
   });
 

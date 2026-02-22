@@ -84,7 +84,7 @@ It reads JSON only.
 # Phase 5 — Git & Automation Awareness
 
 ## Status Indicators
-- [ ] project_status.json timestamps displayed correctly
+- [x] project_status.json timestamps displayed correctly
 - [ ] Test health color coded:
     - [ ] Green = Pass
     - [ ] Orange = Warning
@@ -94,7 +94,7 @@ It reads JSON only.
 
 ## Automation Contract
 - [ ] Enforce presence of required JSON keys
-- [ ] Highlight stale repos (no update in X days)
+- [x] Highlight stale repos (no update in X days)
 - [ ] Highlight failing tests
 
 Amatris MUST NOT:
