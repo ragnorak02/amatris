@@ -3,392 +3,813 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Amatris — Portfolio Portal</title>
+<title>Amatris — Studio Dashboard</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --bg: #0a0a12;
+    --row-even: #0f0d1a;
+    --row-odd: #12101f;
+    --header-bg: #151326;
+    --gold: #d4af37;
+    --gold-light: #f0c850;
+    --cyan: #00d4ff;
+    --text: #e0dce8;
+    --text-dim: #8a84a0;
+    --text-dark: #6a6480;
+    --border: #2a2545;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --orange: #f97316;
+    --red: #ef4444;
+    --purple: #a78bfa;
+  }
+
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: #0a0a12;
-    color: #e0dce8;
+    background: var(--bg);
+    color: var(--text);
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    font-size: 14px;
   }
 
+  /* ---- Header ---- */
   header {
+    padding: 1.5rem 2rem 1.2rem;
     text-align: center;
-    padding: 3rem 1rem 2rem;
-    width: 100%;
-    background: linear-gradient(180deg, #12101f 0%, #0a0a12 100%);
-    border-bottom: 1px solid #2a2545;
+    background: linear-gradient(180deg, #12101f 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border);
   }
+  header h1 { color: var(--gold); font-size: 1.6rem; letter-spacing: 0.02em; }
+  header p { color: var(--text-dim); margin-top: 0.2rem; font-size: 0.85rem; }
 
-  header h1 {
-    font-size: 2.4rem;
-    color: #d4af37;
-    text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-    letter-spacing: 0.05em;
-  }
-
-  header p {
-    margin-top: 0.5rem;
-    color: #8a84a0;
-    font-size: 1rem;
-  }
-
-  .stats-bar {
+  /* ---- Summary Bar ---- */
+  #summaryBar {
     display: flex;
-    justify-content: center;
-    gap: 3rem;
-    padding: 1.5rem;
-    max-width: 1100px;
-    width: 100%;
+    gap: 1.25rem;
+    padding: 0.6rem 2rem;
+    max-width: 1800px;
+    margin: 0 auto;
   }
-
-  .stat { text-align: center; }
-
-  .stat-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #d4af37;
-  }
-
-  .stat-label {
-    font-size: 0.8rem;
-    color: #6a6480;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  /* ---- Tab Bar ---- */
-  .tab-bar {
-    display: flex;
-    justify-content: center;
-    gap: 0;
-    max-width: 1100px;
-    width: 100%;
-    padding: 0 2rem;
-    border-bottom: 1px solid #2a2545;
-  }
-
-  .tab-btn {
-    background: none;
-    border: none;
-    color: #6a6480;
-    font-size: 0.95rem;
-    font-weight: 600;
-    padding: 0.9rem 1.5rem;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-    white-space: nowrap;
-    letter-spacing: 0.02em;
-  }
-
-  .tab-btn:hover {
-    color: #c0b8d0;
-  }
-
-  .tab-btn.active {
-    color: #d4af37;
-    border-bottom-color: #d4af37;
-  }
-
-  /* ---- Tab Content ---- */
-  .tab-panels {
-    max-width: 1100px;
-    width: 100%;
-    padding: 2rem;
+  .stat-box {
+    background: var(--header-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 1.1rem;
+    text-align: center;
     flex: 1;
   }
-
-  .tab-panel {
-    display: none;
-    animation: fadeIn 0.25s ease;
+  .stat-box .sv { font-size: 1.5rem; font-weight: 700; color: var(--gold-light); }
+  .stat-box .sl {
+    font-size: 0.68rem; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-dim); margin-top: 0.1rem;
   }
 
-  .tab-panel.active {
-    display: block;
+  /* ---- Toolbar ---- */
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center;
+    padding: 0.6rem 2rem; max-width: 1800px; margin: 0 auto;
+  }
+  .toolbar input[type="text"] {
+    background: var(--header-bg); border: 1px solid var(--border);
+    color: var(--text); padding: 0.4rem 0.75rem; border-radius: 6px;
+    font-size: 0.8rem; width: 210px;
+  }
+  .toolbar input:focus { outline: none; border-color: var(--gold); }
+
+  .chip {
+    padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.68rem;
+    font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+    background: var(--header-bg); color: var(--text-dim);
+    transition: all 0.15s; user-select: none;
+  }
+  .chip:hover { border-color: var(--gold); color: var(--text); }
+  .chip.active { background: var(--gold); color: var(--bg); border-color: var(--gold); }
+
+  .toolbar-spacer { flex: 1; }
+  .game-count { font-size: 0.72rem; color: var(--text-dark); margin-left: 0.3rem; }
+
+  .toolbar button {
+    background: var(--header-bg); border: 1px solid var(--border);
+    color: var(--text-dim); padding: 0.4rem 0.85rem; border-radius: 6px;
+    font-size: 0.73rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .toolbar button:hover { border-color: var(--gold); color: var(--gold); }
+  .toolbar button.primary { background: var(--gold); color: var(--bg); border-color: var(--gold); }
+  .toolbar button.primary:hover { background: var(--gold-light); }
+
+  /* ---- Table ---- */
+  .table-wrap {
+    overflow-x: auto; padding: 0 2rem 2rem;
+    max-width: 1800px; margin: 0 auto;
+  }
+  table {
+    width: 100%; min-width: 1600px; border-collapse: collapse;
+    font-size: 0.8rem;
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
+  /* Sticky two-row header */
+  thead tr:first-child th {
+    position: sticky; top: 0; z-index: 11;
+    background: var(--header-bg); font-size: 0.6rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 0.3rem 0.3rem; text-align: center;
+    cursor: default; user-select: none; white-space: nowrap;
+  }
+  thead tr:first-child th.gc { border-bottom: 2px solid var(--gold); color: var(--gold); }
+  thead tr:first-child th.gf { border-bottom: 2px solid var(--cyan); color: var(--cyan); }
+  thead tr:first-child th.gp { border-bottom: 2px solid var(--orange); color: var(--orange); }
+  thead tr:first-child th.gk { border-bottom: 2px solid var(--purple); color: var(--purple); }
+  thead tr:first-child th.gt { border-bottom: 2px solid var(--gold); color: var(--gold); }
+
+  thead tr:nth-child(2) th {
+    position: sticky; top: 28px; z-index: 10;
+    background: var(--header-bg); color: var(--text-dim);
+    font-size: 0.66rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.03em; padding: 0.35rem 0.25rem; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    border-bottom: 1px solid var(--border); cursor: pointer; user-select: none;
+  }
+  thead tr:nth-child(2) th:hover { color: var(--gold-light); }
+  thead tr:nth-child(2) th .sa { font-size: 0.58rem; margin-left: 1px; opacity: 0.4; }
+  thead tr:nth-child(2) th.sorted .sa { opacity: 1; color: var(--gold-light); }
+  th.al { text-align: left; padding-left: 0.5rem; }
+
+  /* ---- Data rows ---- */
+  tbody tr.game-row { cursor: pointer; transition: background 0.1s; }
+  tbody tr.game-row:nth-child(odd) { background: var(--row-odd); }
+  tbody tr.game-row:nth-child(even) { background: var(--row-even); }
+  tbody tr.game-row:hover { background: #1a1730; }
+
+  tbody td {
+    padding: 0.4rem 0.25rem; text-align: center; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    border-bottom: 1px solid #1a1730; font-size: 0.78rem;
+  }
+  td.al { text-align: left; padding-left: 0.5rem; }
+  td.cn { color: var(--gold-light); font-weight: 600; }
+  td.ci { color: var(--text-dark); font-size: 0.7rem; }
+
+  /* ---- Status icons ---- */
+  .ic { color: var(--green); }
+  .ip { color: var(--yellow); }
+  .im { color: var(--red); }
+  .iu { color: var(--text-dark); }
+
+  /* ---- Completion bar ---- */
+  .cb { display: flex; align-items: center; gap: 3px; justify-content: center; }
+  .cbar { width: 38px; height: 5px; background: #1a1830; border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+  .cfill { height: 100%; border-radius: 3px; }
+  .ctxt { font-size: 0.7rem; min-width: 26px; text-align: right; }
+
+  /* ---- Category % ---- */
+  .kbar { width: 30px; height: 4px; background: #1a1830; border-radius: 2px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 2px; }
+  .kfill { height: 100%; border-radius: 2px; }
+
+  /* ---- Compliance badge ---- */
+  .badge { display: inline-block; padding: 0.12rem 0.35rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+  .badge-g { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-y { background: rgba(234,179,8,0.15); color: var(--yellow); }
+  .badge-r { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  /* ---- Days ago ---- */
+  .dg { color: var(--green); }
+  .dy { color: var(--yellow); }
+  .dr { color: var(--red); }
+
+  /* ---- Missing pills ---- */
+  .mpill {
+    display: inline-block; background: rgba(239,68,68,0.15); color: var(--red);
+    font-size: 0.58rem; padding: 0.08rem 0.3rem; border-radius: 3px;
+    margin-left: 3px; cursor: help;
   }
 
-  .panel-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
+  /* ---- Engine / Phase / Status colors ---- */
+  .eg { color: #60a5fa; }
+  .eu { color: #c084fc; }
+  .eh { color: #4ade80; }
+  .pc { color: var(--text-dark); }
+  .pp { color: var(--orange); }
+  .pd { color: var(--cyan); }
+  .pr { color: var(--green); }
+  .sa-active { color: var(--green); font-size: 0.7rem; }
+  .sa-placeholder { color: var(--text-dark); font-size: 0.7rem; }
 
-  .panel-icon {
-    font-size: 2.5rem;
+  /* ---- Expand row ---- */
+  .expand-row td {
+    background: #0d0b18; padding: 1rem; cursor: default;
+    white-space: normal; border-bottom: 2px solid var(--gold);
   }
-
-  .panel-header h2 {
-    font-size: 1.5rem;
-    color: #d4af37;
+  .ex-content { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; max-width: 1200px; }
+  .ex-section h4 {
+    color: var(--gold); font-size: 0.76rem; margin-bottom: 0.4rem;
+    text-transform: uppercase; letter-spacing: 0.04em;
   }
-
-  .panel-header p {
-    color: #8a84a0;
-    font-size: 0.95rem;
-    margin-top: 0.2rem;
+  .ex-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.2rem 0.8rem; }
+  .ex-item { font-size: 0.73rem; color: var(--text-dim); display: flex; align-items: center; gap: 0.3rem; }
+  .ex-actions { display: flex; gap: 0.45rem; margin-top: 0.8rem; flex-wrap: wrap; align-items: center; }
+  .ex-actions button, .ex-actions a {
+    padding: 0.3rem 0.65rem; border-radius: 5px; font-size: 0.7rem; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--header-bg);
+    color: var(--text-dim); text-decoration: none; transition: all 0.15s;
   }
-
-  .panel-body {
-    color: #8a84a0;
-    font-size: 0.95rem;
-    line-height: 1.7;
+  .ex-actions button:hover, .ex-actions a:hover { border-color: var(--gold); color: var(--gold); }
+  .ex-actions .btn-t { background: rgba(0,212,255,0.1); color: var(--cyan); border-color: rgba(0,212,255,0.3); }
+  .ex-actions .btn-t:hover { background: rgba(0,212,255,0.2); }
+  .ex-folder { font-size: 0.68rem; color: var(--text-dark); font-family: monospace; }
+  .test-res {
+    margin-top: 0.4rem; font-size: 0.7rem; padding: 0.35rem 0.55rem;
+    background: rgba(0,0,0,0.3); border-radius: 4px; max-height: 80px; overflow-y: auto;
   }
+  .test-res.tp { border-left: 3px solid var(--green); }
+  .test-res.tf { border-left: 3px solid var(--red); }
+  .test-res.te { border-left: 3px solid var(--orange); }
 
-  .panel-body ul {
-    list-style: none;
-    padding: 0;
+  /* ---- Toast ---- */
+  #toast {
+    position: fixed; top: 1rem; right: 1rem; z-index: 1000;
+    padding: 0.7rem 1.2rem; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+    opacity: 0; transform: translateX(100%); transition: all 0.3s;
+    pointer-events: none; max-width: 380px;
   }
+  #toast.show { opacity: 1; transform: translateX(0); pointer-events: auto; }
+  #toast.success { background: rgba(34,197,94,0.92); color: #fff; }
+  #toast.error { background: rgba(239,68,68,0.92); color: #fff; }
+  #toast.info { background: rgba(0,212,255,0.92); color: #fff; }
 
-  .panel-body ul li {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #1a1830;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
+  .loading { text-align: center; padding: 2.5rem; color: var(--text-dark); }
+
+  /* ---- Play button ---- */
+  .play-btn {
+    background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3);
+    border-radius: 4px; width: 26px; height: 24px; font-size: 0.75rem;
+    cursor: pointer; transition: all 0.15s; line-height: 1; padding: 0;
   }
+  .play-btn:hover { background: rgba(34,197,94,0.35); border-color: var(--gold); box-shadow: 0 0 6px rgba(212,175,55,0.3); }
 
-  .panel-body ul li::before {
-    content: '\25B8';
-    color: #d4af37;
-    font-size: 0.7rem;
+  /* ---- Column resize handle ---- */
+  .th-resize-handle {
+    position: absolute; right: 0; top: 0; width: 4px; height: 100%;
+    cursor: col-resize; user-select: none; z-index: 12;
   }
+  .th-resize-handle:hover, .th-resize-handle.active { background: var(--gold); opacity: 0.6; }
 
-  .open-btn {
-    display: inline-block;
-    margin-top: 1.5rem;
-    padding: 0.7rem 1.8rem;
-    background: #d4af37;
-    color: #0a0a12;
-    text-decoration: none;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    transition: background 0.2s, transform 0.2s;
-  }
-
-  .open-btn:hover {
-    background: #e6c84a;
-    transform: translateY(-2px);
-  }
-
-  .badge {
-    display: inline-block;
-    padding: 0.2rem 0.65rem;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-left: 0.75rem;
-    vertical-align: middle;
-  }
-
-  .badge-html { background: #1a3a2a; color: #4ade80; }
-  .badge-md { background: #1a2a3a; color: #60a5fa; }
-
-  footer {
-    margin-top: auto;
-    padding: 2rem;
-    text-align: center;
-    color: #4a4560;
-    font-size: 0.85rem;
-    border-top: 1px solid #1a1830;
-    width: 100%;
-  }
-
-  @media (max-width: 700px) {
-    header h1 { font-size: 1.6rem; }
-    .stats-bar { gap: 1.5rem; }
-    .stat-value { font-size: 1.4rem; }
-    .tab-bar { overflow-x: auto; justify-content: flex-start; padding: 0 1rem; }
-    .tab-btn { padding: 0.8rem 1rem; font-size: 0.85rem; }
-    .tab-panels { padding: 1.5rem 1rem; }
-  }
+  /* ---- Category column toggle ---- */
+  .cat-hidden .cat-col { display: none; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Amatris</h1>
+  <h1>Studio Dashboard</h1>
   <p>Game Portfolio Command Center</p>
 </header>
 
-<div class="stats-bar">
-  <div class="stat">
-    <div class="stat-value" id="statProjects">—</div>
-    <div class="stat-label">Projects</div>
-  </div>
-  <div class="stat">
-    <div class="stat-value" id="statEngines">—</div>
-    <div class="stat-label">Engines</div>
-  </div>
-  <div class="stat">
-    <div class="stat-value" id="statDocumented">—</div>
-    <div class="stat-label">Documented</div>
-  </div>
+<div id="summaryBar">
+  <div class="stat-box"><div class="sv" id="sP">—</div><div class="sl">Projects</div></div>
+  <div class="stat-box"><div class="sv" id="sC">—</div><div class="sl">Avg Completion</div></div>
+  <div class="stat-box"><div class="sv" id="sF">—</div><div class="sl">Full Compliance</div></div>
+  <div class="stat-box"><div class="sv" id="sM">—</div><div class="sl">Missing Files</div></div>
 </div>
 
-<div class="tab-bar" id="tabBar">
-  <button class="tab-btn active" data-tab="overview">Games Overview</button>
-  <button class="tab-btn" data-tab="heatmap">Completion Heatmap</button>
-  <button class="tab-btn" data-tab="index">Games Index</button>
-  <button class="tab-btn" data-tab="batch">Batch Operations</button>
-  <button class="tab-btn" data-tab="git">Git &amp; GitHub Ops</button>
+<div class="toolbar">
+  <input type="text" id="searchInput" placeholder="Search games...">
+  <span class="chip" data-filter="engine" data-value="godot">Godot</span>
+  <span class="chip" data-filter="engine" data-value="unity">Unity</span>
+  <span class="chip" data-filter="engine" data-value="html">HTML5</span>
+  <span class="chip" data-filter="compliance" data-value="full">Full (8/8)</span>
+  <span class="chip" data-filter="compliance" data-value="gaps">Has Gaps</span>
+  <span class="game-count" id="gameCount"></span>
+  <span class="toolbar-spacer"></span>
+  <button id="toggleCatBtn">Hide Categories</button>
+  <button id="runAllBtn">Run All Tests</button>
+  <button id="refreshBtn" class="primary">Refresh</button>
 </div>
 
-<div class="tab-panels" id="tabPanels">
-
-  <div class="tab-panel active" data-panel="overview">
-    <div class="panel-header">
-      <span class="panel-icon">&#128202;</span>
-      <div>
-        <h2>Games Overview <span class="badge badge-html">HTML Dashboard</span></h2>
-        <p>Interactive dashboard showing all game projects</p>
-      </div>
-    </div>
-    <div class="panel-body">
-      <ul>
-        <li>Phase tracking and completion percentages for all 11 projects</li>
-        <li>Search and filter by engine, genre, or project name</li>
-        <li>Sort by name, completion, or engine type</li>
-        <li>Live data from each game's claude.md checkboxes</li>
-      </ul>
-      <a class="open-btn" href="games_overview.html">Open Games Overview</a>
-    </div>
-  </div>
-
-  <div class="tab-panel" data-panel="heatmap">
-    <div class="panel-header">
-      <span class="panel-icon">&#127912;</span>
-      <div>
-        <h2>Completion Heatmap <span class="badge badge-html">HTML Dashboard</span></h2>
-        <p>Visual heatmap of project completion across the portfolio</p>
-      </div>
-    </div>
-    <div class="panel-body">
-      <ul>
-        <li>Color-coded tiles showing completion at a glance</li>
-        <li>Click any tile to jump to that project's status page</li>
-        <li>Automatic average completion calculation</li>
-        <li>Phase detection from project documentation</li>
-      </ul>
-      <a class="open-btn" href="games_heatmap.html">Open Heatmap</a>
-    </div>
-  </div>
-
-  <div class="tab-panel" data-panel="index">
-    <div class="panel-header">
-      <span class="panel-icon">&#128203;</span>
-      <div>
-        <h2>Games Index <span class="badge badge-md">Markdown</span></h2>
-        <p>Markdown registry of all detected games</p>
-      </div>
-    </div>
-    <div class="panel-body">
-      <ul>
-        <li>Compliance status for each project</li>
-        <li>Engine info and folder structure</li>
-        <li>Next recommended steps per game</li>
-        <li>Quick reference for the full portfolio</li>
-      </ul>
-      <a class="open-btn" href="games_index.md">Open Games Index</a>
-    </div>
-  </div>
-
-  <div class="tab-panel" data-panel="batch">
-    <div class="panel-header">
-      <span class="panel-icon">&#9881;</span>
-      <div>
-        <h2>Batch Operations <span class="badge badge-md">Markdown</span></h2>
-        <p>Safe batch refactoring workflow</p>
-      </div>
-    </div>
-    <div class="panel-body">
-      <ul>
-        <li>PLAN &rarr; APPROVE &rarr; APPLY workflow</li>
-        <li>Never modifies files without explicit approval</li>
-        <li>Cross-project refactoring support</li>
-        <li>Dry-run previews before any changes</li>
-      </ul>
-      <a class="open-btn" href="batch_ops.md">Open Batch Operations</a>
-    </div>
-  </div>
-
-  <div class="tab-panel" data-panel="git">
-    <div class="panel-header">
-      <span class="panel-icon">&#128274;</span>
-      <div>
-        <h2>Git &amp; GitHub Ops <span class="badge badge-md">Markdown</span></h2>
-        <p>Standardized Git workflow with hardened safety policy</p>
-      </div>
-    </div>
-    <div class="panel-body">
-      <ul>
-        <li>Commit standards and push behavior guidelines</li>
-        <li>Credential scanning and secret safety</li>
-        <li>Branch management best practices</li>
-        <li>GitHub integration workflows</li>
-      </ul>
-      <a class="open-btn" href="github_ops.md">Open Git &amp; GitHub Ops</a>
-    </div>
-  </div>
-
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="gc" colspan="8">Core</th>
+        <th class="gf" colspan="5">Features</th>
+        <th class="gp" colspan="5">Compliance</th>
+        <th class="gk cat-col" colspan="5">Categories</th>
+        <th class="gt" colspan="1">Tracking</th>
+      </tr>
+      <tr id="sortRow">
+        <th data-sort="index" style="width:28px">#</th>
+        <th style="width:32px"></th>
+        <th data-sort="name" class="al" style="width:360px">Game <span class="sa"></span></th>
+        <th data-sort="engine" style="width:78px">Engine <span class="sa"></span></th>
+        <th data-sort="phase" style="width:70px">Phase <span class="sa"></span></th>
+        <th data-sort="completion" style="width:80px">Comp% <span class="sa"></span></th>
+        <th data-sort="status" style="width:52px">Status</th>
+        <th class="al" style="width:92px">Next Step</th>
+        <th data-sort="controllerSupport" style="width:54px">Controller</th>
+        <th data-sort="firstVisualUpgrade" style="width:54px">1st Visual</th>
+        <th data-sort="achievements" style="width:54px">Achieve.</th>
+        <th data-sort="testingScripts" style="width:54px">Tests</th>
+        <th data-sort="documentationComplete" style="width:54px">Docs</th>
+        <th data-sort="complianceScore" style="width:52px">Score <span class="sa"></span></th>
+        <th style="width:50px">CLAUDE</th>
+        <th style="width:50px">Direction</th>
+        <th style="width:50px">TestPlan</th>
+        <th style="width:50px">status.html</th>
+        <th class="cat-col" style="width:55px">Graphics</th>
+        <th class="cat-col" style="width:55px">Gameplay</th>
+        <th class="cat-col" style="width:55px">Menus</th>
+        <th class="cat-col" style="width:55px">Controls</th>
+        <th class="cat-col" style="width:55px">Music</th>
+        <th data-sort="lastUpdated" style="width:72px">Updated <span class="sa"></span></th>
+      </tr>
+    </thead>
+    <tbody id="tBody">
+      <tr><td colspan="24" class="loading">Loading game data...</td></tr>
+    </tbody>
+  </table>
 </div>
 
-<footer>
-  Amatris Portfolio &mdash; Serve with: <code>node server.js</code> &mdash; Updated 2026-02-17
-</footer>
+<div id="toast"></div>
 
 <script>
 (function() {
-  var tabs = document.querySelectorAll('.tab-btn');
-  var panels = document.querySelectorAll('.tab-panel');
+  var allGames = [];
+  var sortCol = 'name';
+  var sortDir = 'asc';
+  var expandedId = null;
+  var activeFilters = { engine: {}, compliance: {} };
+  var searchTimer = null;
 
-  tabs.forEach(function(tab) {
-    tab.addEventListener('click', function() {
-      var target = tab.dataset.tab;
+  var tbody = document.getElementById('tBody');
+  var searchInput = document.getElementById('searchInput');
+  var gcEl = document.getElementById('gameCount');
 
-      tabs.forEach(function(t) { t.classList.remove('active'); });
-      tab.classList.add('active');
-
-      panels.forEach(function(p) {
-        p.classList.remove('active');
-        if (p.dataset.panel === target) p.classList.add('active');
-      });
+  /* ---- Data ---- */
+  function loadData() {
+    return fetch('/api/games').then(function(r) {
+      console.log('[Dashboard] API response status:', r.status);
+      if (!r.ok) { console.error('[Dashboard] API not ok'); return []; }
+      return r.json();
+    }).then(function(data) {
+      console.log('[Dashboard] Loaded', data.length, 'games');
+      return data;
+    }).catch(function(err) {
+      console.error('[Dashboard] Fetch failed:', err);
+      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
+      return [];
     });
+  }
+
+  /* ---- Summary ---- */
+  function renderSummary(games) {
+    var tc = 0, fc = 0, tm = 0;
+    games.forEach(function(g) {
+      tc += (g.completion || 0);
+      if (g.dashboard && g.dashboard.compliance) {
+        if (g.dashboard.compliance.complianceScore === 8) fc++;
+        tm += g.dashboard.compliance.missingFiles.length;
+      }
+    });
+    document.getElementById('sP').textContent = games.length;
+    document.getElementById('sC').textContent = (games.length ? Math.round(tc / games.length) : 0) + '%';
+    document.getElementById('sF').textContent = fc;
+    document.getElementById('sM').textContent = tm;
+  }
+
+  /* ---- Render helpers ---- */
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function triIcon(v) {
+    if (v === 'complete') return '<span class="ic">\u2714</span>';
+    if (v === 'partial') return '<span class="ip">\u25CF</span>';
+    if (v === 'missing') return '<span class="im">\u2716</span>';
+    return '<span class="iu">\u2014</span>';
+  }
+
+  function boolIcon(v) {
+    return v ? '<span class="ic">\u2714</span>' : '<span class="im">\u2716</span>';
+  }
+
+  function compClr(p) {
+    if (p < 25) return 'var(--red)';
+    if (p < 50) return 'var(--orange)';
+    if (p < 75) return 'var(--yellow)';
+    return 'var(--green)';
+  }
+
+  function compBar(p) {
+    var v = Math.max(0, Math.min(100, p));
+    return '<div class="cb"><div class="cbar"><div class="cfill" style="width:' + v + '%;background:' + compClr(p) + '"></div></div><span class="ctxt">' + p + '%</span></div>';
+  }
+
+  function catCell(v) {
+    if (v === null || v === undefined) return '<span class="iu">\u2014</span>';
+    return '<div class="kbar"><div class="kfill" style="width:' + v + '%;background:' + compClr(v) + '"></div></div>' + v + '%';
+  }
+
+  function cBadge(s, t) {
+    var c = s >= 7 ? 'badge-g' : s >= 5 ? 'badge-y' : 'badge-r';
+    return '<span class="badge ' + c + '">' + s + '/' + t + '</span>';
+  }
+
+  function daysAgo(d) {
+    if (d === null || d === undefined) return '<span class="iu">\u2014</span>';
+    var c = d <= 7 ? 'dg' : d <= 30 ? 'dy' : 'dr';
+    return '<span class="' + c + '">' + d + 'd</span>';
+  }
+
+  function engCls(t) { return t === 'godot' ? 'eg' : t === 'unity' ? 'eu' : t === 'html' ? 'eh' : ''; }
+
+  function phsCls(p) {
+    var l = (p || '').toLowerCase();
+    if (l.indexOf('concept') !== -1) return 'pc';
+    if (l.indexOf('prototype') !== -1) return 'pp';
+    if (l.indexOf('production') !== -1) return 'pr';
+    return 'pd';
+  }
+
+  function nextStep(g) {
+    if (g.status === 'placeholder') return 'Manual launch';
+    var p = (g.phase || '').toLowerCase();
+    if (p.indexOf('concept') !== -1) return 'Build prototype';
+    if (p.indexOf('prototype') !== -1) return 'Core mechanics';
+    if ((g.completion || 0) >= 80) return 'Polish & ship';
+    if ((g.completion || 0) >= 50) return 'Content pass';
+    if ((g.completion || 0) >= 25) return 'Continue dev';
+    return 'Early dev';
+  }
+
+  /* ---- Render table ---- */
+  function renderTable(games) {
+    gcEl.textContent = games.length + ' game' + (games.length !== 1 ? 's' : '');
+    if (!games.length) {
+      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
+      return;
+    }
+    var h = '';
+    games.forEach(function(g, i) {
+      var d = g.dashboard || {};
+      var c = d.compliance || {};
+      var f = d.featureFlags || {};
+      var cat = d.categoryCompletion || {};
+      var dt = d.dates || {};
+      var ex = expandedId === g.id;
+
+      h += '<tr data-id="' + g.id + '" class="game-row">';
+      /* Core */
+      h += '<td class="ci">' + (i + 1) + '</td>';
+      h += '<td><button class="play-btn" data-game="' + g.id + '" data-name="' + esc(g.name) + '" title="Launch ' + esc(g.name) + '">\u25B6</button></td>';
+      h += '<td class="al cn">' + esc(g.name);
+      if (c.missingFiles && c.missingFiles.length > 0 && (c.complianceScore || 0) < 5) {
+        h += '<span class="mpill" title="Missing: ' + esc(c.missingFiles.join(', ')) + '">' + c.missingFiles.length + ' gaps</span>';
+      }
+      h += '</td>';
+      h += '<td class="' + engCls(g.engineType) + '">' + esc(g.engine) + '</td>';
+      h += '<td class="' + phsCls(g.phase) + '">' + esc(g.phase) + '</td>';
+      h += '<td>' + compBar(g.completion || 0) + '</td>';
+      h += '<td><span class="sa-' + g.status + '">' + esc(g.status) + '</span></td>';
+      h += '<td class="al" style="font-size:0.68rem;color:var(--text-dim)">' + nextStep(g) + '</td>';
+      /* Features */
+      h += '<td>' + triIcon(f.controllerSupport) + '</td>';
+      h += '<td>' + triIcon(f.firstVisualUpgrade) + '</td>';
+      h += '<td>' + triIcon(f.achievements) + '</td>';
+      h += '<td>' + triIcon(f.testingScripts) + '</td>';
+      h += '<td>' + triIcon(f.documentationComplete) + '</td>';
+      /* Compliance */
+      h += '<td>' + cBadge(c.complianceScore || 0, c.complianceTotal || 8) + '</td>';
+      h += '<td>' + boolIcon(c.hasClaudeMd) + '</td>';
+      h += '<td>' + boolIcon(c.hasGameDirection) + '</td>';
+      h += '<td>' + boolIcon(c.hasTestPlan) + '</td>';
+      h += '<td>' + boolIcon(c.hasStatusHtml) + '</td>';
+      /* Categories */
+      h += '<td class="cat-col">' + catCell(cat.graphics) + '</td>';
+      h += '<td class="cat-col">' + catCell(cat.gameplay) + '</td>';
+      h += '<td class="cat-col">' + catCell(cat.menus) + '</td>';
+      h += '<td class="cat-col">' + catCell(cat.controls) + '</td>';
+      h += '<td class="cat-col">' + catCell(cat.music) + '</td>';
+      /* Tracking */
+      h += '<td>' + daysAgo(dt.daysSinceUpdate) + '</td>';
+      h += '</tr>';
+
+      if (ex) h += buildExpand(g);
+    });
+    tbody.innerHTML = h;
+  }
+
+  /* ---- Expand row ---- */
+  function buildExpand(g) {
+    var d = g.dashboard || {};
+    var c = d.compliance || {};
+    var ms = g.milestones || {};
+    var tech = g.tech || {};
+    var ts = g.testingStatus || {};
+
+    var h = '<tr class="expand-row"><td colspan="24"><div class="ex-content">';
+
+    /* Left: compliance grid */
+    h += '<div class="ex-section"><h4>File Compliance (' + (c.complianceScore || 0) + '/8)</h4><div class="ex-grid">';
+    var files = [
+      ['CLAUDE.md', c.hasClaudeMd], ['game_direction.md', c.hasGameDirection],
+      ['test_plan.md', c.hasTestPlan], ['status.html', c.hasStatusHtml],
+      ['game.config.json', c.hasGameConfig], ['project_status.json', c.hasProjectStatus],
+      ['achievements.json', c.hasAchievements], ['achievements_integration.md', c.hasAchievementsIntegration]
+    ];
+    files.forEach(function(f) { h += '<div class="ex-item">' + boolIcon(f[1]) + ' ' + esc(f[0]) + '</div>'; });
+    h += '</div></div>';
+
+    /* Center: milestones */
+    h += '<div class="ex-section"><h4>Milestones</h4>';
+    var mlist = [
+      ['First Graphics Pass', ms.firstGraphicsPass],
+      ['Controller Integration', ms.controllerIntegration],
+      ['Core Gameplay Loop', ms.coreGameplayLoop],
+      ['Vertical Slice', ms.verticalSlice],
+      ['Content Complete', ms.contentComplete],
+      ['Production Ready', ms.productionReady]
+    ];
+    mlist.forEach(function(m) { h += '<div class="ex-item">' + boolIcon(!!m[1]) + ' ' + esc(m[0]) + '</div>'; });
+    h += '</div>';
+
+    /* Right: tech + tests */
+    h += '<div class="ex-section"><h4>Tech Stack</h4>';
+    if (tech.engine) h += '<div class="ex-item">Engine: ' + esc(tech.engine + ' ' + (tech.engineVersion || '')) + '</div>';
+    if (tech.languages && tech.languages.length) h += '<div class="ex-item">Languages: ' + esc(tech.languages.join(', ')) + '</div>';
+    if (tech.graphicsType) h += '<div class="ex-item">Graphics: ' + esc(tech.graphicsType) + '</div>';
+    h += '<h4 style="margin-top:0.6rem">Testing</h4>';
+    if (ts.status) h += '<div class="ex-item">Status: ' + esc(ts.status) + '</div>';
+    if (ts.notes) h += '<div class="ex-item" style="white-space:normal">' + esc(ts.notes) + '</div>';
+    h += '<div id="tr-' + g.id + '"></div>';
+    h += '</div>';
+
+    h += '</div>'; /* end ex-content */
+
+    /* Actions */
+    h += '<div class="ex-actions">';
+    if (g.files && g.files.claudeMd) h += '<a href="/api/file?path=' + encodeURIComponent(g.files.claudeMd) + '" target="_blank">View CLAUDE.md</a>';
+    if (g.files && g.files.gameDirection) h += '<a href="/api/file?path=' + encodeURIComponent(g.files.gameDirection) + '" target="_blank">View Direction</a>';
+    if (g.hasTestRunner) h += '<button class="btn-t" onclick="event.stopPropagation();window._runTest(\'' + g.id + '\')">Run Tests</button>';
+    h += '<span class="ex-folder">' + esc(g.folder) + '/</span>';
+    h += '</div>';
+
+    h += '</td></tr>';
+    return h;
+  }
+
+  /* ---- Sorting ---- */
+  function sortVal(g, col) {
+    var d = g.dashboard || {};
+    switch (col) {
+      case 'index': return 0;
+      case 'name': return (g.name || '').toLowerCase();
+      case 'engine': return (g.engine || '').toLowerCase();
+      case 'phase': return (g.phase || '').toLowerCase();
+      case 'completion': return g.completion || 0;
+      case 'status': return g.status || '';
+      case 'complianceScore': return d.compliance ? d.compliance.complianceScore : 0;
+      case 'lastUpdated': return d.dates && d.dates.daysSinceUpdate !== null ? d.dates.daysSinceUpdate : 99999;
+      case 'controllerSupport':
+      case 'firstVisualUpgrade':
+      case 'achievements':
+      case 'testingScripts':
+      case 'documentationComplete':
+        var ff = d.featureFlags || {};
+        var v = ff[col] || 'unknown';
+        return v === 'complete' ? 0 : v === 'partial' ? 1 : v === 'missing' ? 2 : 3;
+      default: return 0;
+    }
+  }
+
+  function doSort(games) {
+    if (sortCol === 'index') return games;
+    var dir = sortDir === 'asc' ? 1 : -1;
+    return games.slice().sort(function(a, b) {
+      var va = sortVal(a, sortCol), vb = sortVal(b, sortCol);
+      if (typeof va === 'string') return va.localeCompare(vb) * dir;
+      return (va - vb) * dir;
+    });
+  }
+
+  /* ---- Filtering ---- */
+  function doFilter(games) {
+    var q = searchInput.value.toLowerCase().trim();
+    var ef = Object.keys(activeFilters.engine).filter(function(k) { return activeFilters.engine[k]; });
+    var cf = Object.keys(activeFilters.compliance).filter(function(k) { return activeFilters.compliance[k]; });
+
+    return games.filter(function(g) {
+      if (q) {
+        var hay = [g.name, g.folder, g.engine, g.genre, g.phase].join(' ').toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      if (ef.length > 0 && ef.indexOf(g.engineType) === -1) return false;
+      if (cf.length > 0) {
+        var cs = g.dashboard && g.dashboard.compliance ? g.dashboard.compliance.complianceScore : 0;
+        var ct = g.dashboard && g.dashboard.compliance ? g.dashboard.compliance.complianceTotal : 8;
+        var match = false;
+        for (var i = 0; i < cf.length; i++) {
+          if (cf[i] === 'full' && cs === ct) match = true;
+          if (cf[i] === 'gaps' && cs < ct) match = true;
+        }
+        if (!match) return false;
+      }
+      return true;
+    });
+  }
+
+  /* ---- Central render ---- */
+  function filterAndRender() {
+    var filtered = doFilter(allGames);
+    var sorted = doSort(filtered);
+    renderSummary(allGames);
+    renderTable(sorted);
+  }
+
+  /* ---- Row click → expand/collapse (skip play buttons) ---- */
+  tbody.addEventListener('click', function(e) {
+    var btn = e.target.closest('.play-btn');
+    if (btn) {
+      e.stopPropagation();
+      window._launchGame(btn.getAttribute('data-game'), btn.getAttribute('data-name'));
+      return;
+    }
+    var row = e.target.closest('tr.game-row');
+    if (!row) return;
+    var id = row.getAttribute('data-id');
+    if (id) {
+      expandedId = (expandedId === id) ? null : id;
+      filterAndRender();
+    }
   });
 
-  // Load live stats from /api/games
-  fetch('/api/games').then(function(res) {
-    return res.json();
-  }).then(function(games) {
-    var total = games.length;
-    var engines = {};
-    var documented = 0;
-    games.forEach(function(g) {
-      engines[g.engineType] = true;
-      if (g.files && g.files.claudeMd) documented++;
+  /* ---- Sort header click ---- */
+  document.getElementById('sortRow').addEventListener('click', function(e) {
+    var th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    var col = th.getAttribute('data-sort');
+    if (sortCol === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+    else { sortCol = col; sortDir = 'asc'; }
+    updateSortUI();
+    filterAndRender();
+  });
+
+  function updateSortUI() {
+    var ths = document.querySelectorAll('#sortRow th[data-sort]');
+    for (var i = 0; i < ths.length; i++) {
+      var th = ths[i];
+      var arrow = th.querySelector('.sa');
+      th.classList.remove('sorted');
+      if (arrow) arrow.textContent = '';
+      if (th.getAttribute('data-sort') === sortCol) {
+        th.classList.add('sorted');
+        if (arrow) arrow.textContent = sortDir === 'asc' ? ' \u25B2' : ' \u25BC';
+      }
+    }
+  }
+
+  /* ---- Chip toggles ---- */
+  var chips = document.querySelectorAll('.chip');
+  for (var ci = 0; ci < chips.length; ci++) {
+    chips[ci].addEventListener('click', function() {
+      var ft = this.getAttribute('data-filter');
+      var fv = this.getAttribute('data-value');
+      if (activeFilters[ft][fv]) {
+        delete activeFilters[ft][fv];
+        this.classList.remove('active');
+      } else {
+        activeFilters[ft][fv] = true;
+        this.classList.add('active');
+      }
+      filterAndRender();
     });
-    document.getElementById('statProjects').textContent = total;
-    document.getElementById('statEngines').textContent = Object.keys(engines).length;
-    document.getElementById('statDocumented').textContent = documented + '/' + total;
-  }).catch(function() {
-    document.getElementById('statProjects').textContent = '?';
-    document.getElementById('statEngines').textContent = '?';
-    document.getElementById('statDocumented').textContent = '?';
+  }
+
+  /* ---- Search (debounced) ---- */
+  searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(filterAndRender, 250);
+  });
+
+  /* ---- Toggle Categories columns ---- */
+  document.getElementById('toggleCatBtn').addEventListener('click', function() {
+    var table = document.querySelector('.table-wrap');
+    table.classList.toggle('cat-hidden');
+    this.textContent = table.classList.contains('cat-hidden') ? 'Show Categories' : 'Hide Categories';
+  });
+
+  /* ---- Run Tests (single game) ---- */
+  window._runTest = function(gameId) {
+    var el = document.getElementById('tr-' + gameId);
+    if (el) el.innerHTML = '<div class="test-res" style="color:var(--cyan)">Running tests...</div>';
+    fetch('/api/tests/' + gameId, { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!el) return;
+        var cls = res.status === 'pass' ? 'tp' : res.status === 'error' ? 'te' : 'tf';
+        var msg = res.status === 'pass'
+          ? 'Passed ' + (res.testsPassed || 0) + '/' + (res.testsTotal || 0)
+          : (res.status || 'fail') + ': ' + (res.testsFailed || 0) + ' failed';
+        if (res.rawOutput) msg += '<br><small style="opacity:0.7">' + esc(res.rawOutput.substring(0, 200)) + '</small>';
+        el.innerHTML = '<div class="test-res ' + cls + '">' + msg + '</div>';
+      })
+      .catch(function(err) {
+        if (el) el.innerHTML = '<div class="test-res te">Error: ' + esc(err.message) + '</div>';
+      });
+  };
+
+  /* ---- Run All Tests ---- */
+  document.getElementById('runAllBtn').addEventListener('click', function() {
+    var btn = this;
+    btn.textContent = 'Running...';
+    btn.disabled = true;
+    fetch('/api/tests/run-all', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var rs = data.results || [];
+        var p = rs.filter(function(r) { return r.status === 'pass'; }).length;
+        var f = rs.filter(function(r) { return r.status === 'fail' || r.status === 'error'; }).length;
+        var s = rs.filter(function(r) { return r.status === 'skipped'; }).length;
+        showToast(p + ' passed, ' + f + ' failed, ' + s + ' skipped', f > 0 ? 'error' : 'success');
+        btn.textContent = 'Run All Tests'; btn.disabled = false;
+      })
+      .catch(function(err) {
+        showToast('Test run failed: ' + err.message, 'error');
+        btn.textContent = 'Run All Tests'; btn.disabled = false;
+      });
+  });
+
+  /* ---- Refresh ---- */
+  document.getElementById('refreshBtn').addEventListener('click', function() {
+    tbody.innerHTML = '<tr><td colspan="24" class="loading">Refreshing...</td></tr>';
+    loadData().then(function(games) { allGames = games; filterAndRender(); });
+  });
+
+  /* ---- Launch Game ---- */
+  window._launchGame = function(gameId, gameName) {
+    fetch('/launch/' + gameId)
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.status === 'launched') {
+          showToast('Launched ' + gameName, 'success');
+        } else if (res.status === 'embed') {
+          window.open(res.embedUrl, '_blank');
+          showToast('Opened ' + gameName + ' in new tab', 'info');
+        } else if (res.status === 'placeholder') {
+          showToast(gameName + ' — manual launch required', 'info');
+        } else {
+          showToast('Launched ' + gameName, 'success');
+        }
+      })
+      .catch(function(err) {
+        showToast('Failed to launch ' + gameName + ': ' + err.message, 'error');
+      });
+  };
+
+  /* ---- Column Resize ---- */
+  function initColumnResize() {
+    var ths = document.querySelectorAll('#sortRow th');
+    for (var i = 0; i < ths.length; i++) {
+      var handle = document.createElement('div');
+      handle.className = 'th-resize-handle';
+      ths[i].appendChild(handle);
+      handle.addEventListener('mousedown', (function(th) {
+        return function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var startX = e.pageX;
+          var startW = th.offsetWidth;
+          this.classList.add('active');
+          var self = this;
+          function onMove(ev) { th.style.width = Math.max(28, startW + ev.pageX - startX) + 'px'; }
+          function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            self.classList.remove('active');
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+      })(ths[i]));
+    }
+  }
+
+  /* ---- Toast ---- */
+  function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = (type || 'info') + ' show';
+    setTimeout(function() { t.classList.remove('show'); }, 4000);
+  }
+
+  /* ---- Init ---- */
+  console.log('[Dashboard] Initializing...');
+  loadData().then(function(games) {
+    console.log('[Dashboard] Init complete, rendering', games.length, 'games');
+    allGames = games;
+    filterAndRender();
+    updateSortUI();
+    initColumnResize();
+  }).catch(function(err) {
+    console.error('[Dashboard] Init error:', err);
   });
 })();
 </script>

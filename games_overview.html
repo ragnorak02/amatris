@@ -115,7 +115,7 @@
   }
   table {
     width: 100%; min-width: 1600px; border-collapse: collapse;
-    table-layout: fixed; font-size: 0.8rem;
+    font-size: 0.8rem;
   }
 
   /* Sticky two-row header */
@@ -133,7 +133,7 @@
   thead tr:first-child th.gt { border-bottom: 2px solid var(--gold); color: var(--gold); }
 
   thead tr:nth-child(2) th {
-    position: sticky; top: 25px; z-index: 10;
+    position: sticky; top: 28px; z-index: 10;
     background: var(--header-bg); color: var(--text-dim);
     font-size: 0.66rem; font-weight: 600; text-transform: uppercase;
     letter-spacing: 0.03em; padding: 0.35rem 0.25rem; text-align: center;
@@ -249,6 +249,21 @@
 
   .loading { text-align: center; padding: 2.5rem; color: var(--text-dark); }
 
+  /* ---- Play button ---- */
+  .play-btn {
+    background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3);
+    border-radius: 4px; width: 26px; height: 24px; font-size: 0.75rem;
+    cursor: pointer; transition: all 0.15s; line-height: 1; padding: 0;
+  }
+  .play-btn:hover { background: rgba(34,197,94,0.35); border-color: var(--gold); box-shadow: 0 0 6px rgba(212,175,55,0.3); }
+
+  /* ---- Column resize handle ---- */
+  .th-resize-handle {
+    position: absolute; right: 0; top: 0; width: 4px; height: 100%;
+    cursor: col-resize; user-select: none; z-index: 12;
+  }
+  .th-resize-handle:hover, .th-resize-handle.active { background: var(--gold); opacity: 0.6; }
+
   /* ---- Category column toggle ---- */
   .cat-hidden .cat-col { display: none; }
 </style>
@@ -287,7 +302,7 @@
   <table>
     <thead>
       <tr>
-        <th class="gc" colspan="7">Core</th>
+        <th class="gc" colspan="8">Core</th>
         <th class="gf" colspan="5">Features</th>
         <th class="gp" colspan="5">Compliance</th>
         <th class="gk cat-col" colspan="5">Categories</th>
@@ -295,7 +310,8 @@
       </tr>
       <tr id="sortRow">
         <th data-sort="index" style="width:28px">#</th>
-        <th data-sort="name" class="al" style="width:320px">Game <span class="sa"></span></th>
+        <th style="width:32px"></th>
+        <th data-sort="name" class="al" style="width:360px">Game <span class="sa"></span></th>
         <th data-sort="engine" style="width:78px">Engine <span class="sa"></span></th>
         <th data-sort="phase" style="width:70px">Phase <span class="sa"></span></th>
         <th data-sort="completion" style="width:80px">Comp% <span class="sa"></span></th>
@@ -320,7 +336,7 @@
       </tr>
     </thead>
     <tbody id="tBody">
-      <tr><td colspan="23" class="loading">Loading game data...</td></tr>
+      <tr><td colspan="24" class="loading">Loading game data...</td></tr>
     </tbody>
   </table>
 </div>
@@ -351,7 +367,7 @@
       return data;
     }).catch(function(err) {
       console.error('[Dashboard] Fetch failed:', err);
-      tbody.innerHTML = '<tr><td colspan="23" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
       return [];
     });
   }
@@ -439,7 +455,7 @@
   function renderTable(games) {
     gcEl.textContent = games.length + ' game' + (games.length !== 1 ? 's' : '');
     if (!games.length) {
-      tbody.innerHTML = '<tr><td colspan="23" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
       return;
     }
     var h = '';
@@ -454,6 +470,7 @@
       h += '<tr data-id="' + g.id + '" class="game-row">';
       /* Core */
       h += '<td class="ci">' + (i + 1) + '</td>';
+      h += '<td><button class="play-btn" data-game="' + g.id + '" data-name="' + esc(g.name) + '" title="Launch ' + esc(g.name) + '">\u25B6</button></td>';
       h += '<td class="al cn">' + esc(g.name);
       if (c.missingFiles && c.missingFiles.length > 0 && (c.complianceScore || 0) < 5) {
         h += '<span class="mpill" title="Missing: ' + esc(c.missingFiles.join(', ')) + '">' + c.missingFiles.length + ' gaps</span>';
@@ -499,7 +516,7 @@
     var tech = g.tech || {};
     var ts = g.testingStatus || {};
 
-    var h = '<tr class="expand-row"><td colspan="23"><div class="ex-content">';
+    var h = '<tr class="expand-row"><td colspan="24"><div class="ex-content">';
 
     /* Left: compliance grid */
     h += '<div class="ex-section"><h4>File Compliance (' + (c.complianceScore || 0) + '/8)</h4><div class="ex-grid">';
@@ -618,8 +635,14 @@
     renderTable(sorted);
   }
 
-  /* ---- Row click → expand/collapse ---- */
+  /* ---- Row click → expand/collapse (skip play buttons) ---- */
   tbody.addEventListener('click', function(e) {
+    var btn = e.target.closest('.play-btn');
+    if (btn) {
+      e.stopPropagation();
+      window._launchGame(btn.getAttribute('data-game'), btn.getAttribute('data-name'));
+      return;
+    }
     var row = e.target.closest('tr.game-row');
     if (!row) return;
     var id = row.getAttribute('data-id');
@@ -727,9 +750,58 @@
 
   /* ---- Refresh ---- */
   document.getElementById('refreshBtn').addEventListener('click', function() {
-    tbody.innerHTML = '<tr><td colspan="23" class="loading">Refreshing...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="24" class="loading">Refreshing...</td></tr>';
     loadData().then(function(games) { allGames = games; filterAndRender(); });
   });
+
+  /* ---- Launch Game ---- */
+  window._launchGame = function(gameId, gameName) {
+    fetch('/launch/' + gameId)
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.status === 'launched') {
+          showToast('Launched ' + gameName, 'success');
+        } else if (res.status === 'embed') {
+          window.open(res.embedUrl, '_blank');
+          showToast('Opened ' + gameName + ' in new tab', 'info');
+        } else if (res.status === 'placeholder') {
+          showToast(gameName + ' — manual launch required', 'info');
+        } else {
+          showToast('Launched ' + gameName, 'success');
+        }
+      })
+      .catch(function(err) {
+        showToast('Failed to launch ' + gameName + ': ' + err.message, 'error');
+      });
+  };
+
+  /* ---- Column Resize ---- */
+  function initColumnResize() {
+    var ths = document.querySelectorAll('#sortRow th');
+    for (var i = 0; i < ths.length; i++) {
+      var handle = document.createElement('div');
+      handle.className = 'th-resize-handle';
+      ths[i].appendChild(handle);
+      handle.addEventListener('mousedown', (function(th) {
+        return function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var startX = e.pageX;
+          var startW = th.offsetWidth;
+          this.classList.add('active');
+          var self = this;
+          function onMove(ev) { th.style.width = Math.max(28, startW + ev.pageX - startX) + 'px'; }
+          function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            self.classList.remove('active');
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+      })(ths[i]));
+    }
+  }
 
   /* ---- Toast ---- */
   function showToast(msg, type) {
@@ -746,6 +818,7 @@
     allGames = games;
     filterAndRender();
     updateSortUI();
+    initColumnResize();
   }).catch(function(err) {
     console.error('[Dashboard] Init error:', err);
   });

@@ -227,7 +227,13 @@ function getGames(res) {
         }
         if (tags.length === 0) {
             // Generate tags from genre
-            if (config.genre) tags = config.genre.split(/[,\/]/).map(t => t.trim()).slice(0, 3);
+            if (config.genre) {
+                if (Array.isArray(config.genre)) {
+                    tags = config.genre.slice(0, 3);
+                } else {
+                    tags = config.genre.split(/[,\/]/).map(t => t.trim()).slice(0, 3);
+                }
+            }
         }
 
         // Read completion from claude.md checkboxes if we have no progressPercent

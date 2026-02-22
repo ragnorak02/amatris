@@ -89,8 +89,9 @@ Store, Library, News, Mods, WIP, Patreon, Credits — "Library" activates the St
 ## Portfolio Dashboard (served via same server)
 | Page | URL |
 |------|-----|
+| **Main dashboard (Studio table)** | `/amatris%20dashboard.html` |
+| Studio table (standalone copy) | `/games_overview.html` |
 | Portal hub | `/hybrid_knights_portal.html` |
-| Game cards + search/filter | `/games_overview.html` |
 | Completion heatmap | `/games_heatmap.html` |
 | Markdown index | `/games_index.md` |
 

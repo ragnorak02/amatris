@@ -1,7 +1,7 @@
 @echo off
 REM ============================================
 REM  Amatris — Studio OS Launcher
-REM  Starts Node server + opens browser
+REM  Starts Node server + opens browser once ready
 REM ============================================
 
 cd /d "Z:\Development\amatris"
@@ -19,8 +19,26 @@ echo  ========================================
 echo   Amatris - Studio OS
 echo  ========================================
 echo.
-echo  Starting server at http://localhost:3000
-echo.
+echo  Starting server...
 
+REM Start server in a minimized window so it stays alive
+start /min "Amatris Server" cmd /c "cd /d Z:\Development\amatris && node server.js"
+
+REM Wait for server to be ready (poll up to 10 seconds)
+set /a TRIES=0
+:waitloop
+if %TRIES% geq 20 (
+    echo  [ERROR] Server did not start within 10 seconds.
+    pause
+    exit /b 1
+)
+timeout /t 1 /nobreak >nul 2>&1
+netstat -ano | findstr ":3000 " | findstr "LISTENING" >nul 2>&1
+if %errorlevel% equ 0 goto :ready
+set /a TRIES+=1
+goto :waitloop
+
+:ready
+echo  Server is ready at http://localhost:3000
 start "" "http://localhost:3000"
-node server.js
+echo  Opening browser...
