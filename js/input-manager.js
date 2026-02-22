@@ -46,20 +46,34 @@ var InputManager = (function () {
 
     /* ---- Context stack ---- */
     var contextStack = ['launcher'];
+    var contextChangeCallbacks = [];
 
     function pushContext(ctx) {
         contextStack.push(ctx);
+        fireContextChange(ctx);
     }
 
     function popContext() {
         if (contextStack.length > 1) {
-            return contextStack.pop();
+            contextStack.pop();
         }
-        return contextStack[0];
+        var current = contextStack[contextStack.length - 1];
+        fireContextChange(current);
+        return current;
     }
 
     function getContext() {
         return contextStack[contextStack.length - 1];
+    }
+
+    function onContextChange(cb) {
+        contextChangeCallbacks.push(cb);
+    }
+
+    function fireContextChange(ctx) {
+        for (var i = 0; i < contextChangeCallbacks.length; i++) {
+            contextChangeCallbacks[i](ctx);
+        }
     }
 
     /* ---- Public API ---- */
@@ -70,6 +84,7 @@ var InputManager = (function () {
         emit: emit,
         pushContext: pushContext,
         popContext: popContext,
-        getContext: getContext
+        getContext: getContext,
+        onContextChange: onContextChange
     };
 })();

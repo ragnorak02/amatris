@@ -72,12 +72,12 @@ It reads JSON only.
 # Phase 4 — Controller Integration
 
 ## Navigation
-- [ ] Full Xbox controller navigation
-- [ ] A = Launch Game
-- [ ] Y = View Info
-- [ ] LB/RB = Switch Tabs
-- [ ] D-pad & Stick navigation
-- [ ] Visible controller hint bar
+- [x] Full Xbox controller navigation
+- [x] A = Launch Game
+- [x] Y = View Info
+- [x] LB/RB = Switch Tabs
+- [x] D-pad & Stick navigation
+- [x] Visible controller hint bar
 
 ---
 
@@ -143,6 +143,6 @@ Amatris MUST NOT:
 
 # Current Focus
 
-Current Goal: Phase 4 — Controller Integration
-Current Task: Implement full Xbox controller navigation for modal and dashboard
-Next Milestone: Phase 4 complete
+Current Goal: Phase 5 — Git & Automation Awareness
+Current Task: Implement status indicators and automation contract
+Next Milestone: Phase 5 complete

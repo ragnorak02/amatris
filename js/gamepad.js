@@ -1,7 +1,8 @@
 /* ============================================================
    gamepad.js — Xbox controller support for Amatris
    Polls the Gamepad API, emits semantic actions via InputManager.
-   Context-aware routing: launcher, detail_panel, gameplay, overlay.
+   Context-aware routing: launcher, detail_panel, file_preview,
+   gameplay, overlay.
    ============================================================ */
 
 var GamepadInput = (function () {
@@ -27,24 +28,92 @@ var GamepadInput = (function () {
 
     var NAV_REPEAT_MS = 180;
     var STICK_DEADZONE = 0.5;
+    var SCROLL_DELTA = 80;
 
     /* ---- Hold-Y state ---- */
     var yHoldStart = 0;
     var Y_HOLD_THRESHOLD = 1000;
 
+    /* ---- Hint bar element ---- */
+    var hintBar = null;
+
+    /* ---- Context → hint definitions ---- */
+    var HINT_MAP = {
+        launcher:     [
+            { btn: 'A', label: 'Launch' },
+            { btn: 'Y', label: 'Info' },
+            { btn: 'D-pad', label: 'Navigate' },
+            { btn: 'LB/RB', label: 'Tabs' }
+        ],
+        detail_panel: [
+            { btn: 'A', label: 'Confirm' },
+            { btn: 'B', label: 'Close' },
+            { btn: 'LB/RB', label: 'Tabs' },
+            { btn: 'D-pad', label: 'Navigate' }
+        ],
+        file_preview: [
+            { btn: 'B', label: 'Close' },
+            { btn: 'D-pad', label: 'Scroll' },
+            { btn: 'A', label: 'Download' }
+        ],
+        gameplay:     [
+            { btn: 'Start', label: 'Overlay' },
+            { btn: 'Hold Y', label: 'Exit' }
+        ],
+        overlay:      [
+            { btn: 'A', label: 'Select' },
+            { btn: 'B', label: 'Close' },
+            { btn: 'D-pad', label: 'Navigate' }
+        ]
+    };
+
     /* ============================================================
        INIT
        ============================================================ */
     function init() {
+        hintBar = document.getElementById('controller-hints');
+
         window.addEventListener('gamepadconnected', function () {
             connected = true;
+            showHintBar();
+            updateHints(InputManager.getContext());
         });
 
         window.addEventListener('gamepaddisconnected', function () {
             connected = false;
+            hideHintBar();
+        });
+
+        // Update hints whenever context changes
+        InputManager.onContextChange(function (ctx) {
+            if (connected) updateHints(ctx);
         });
 
         requestAnimationFrame(poll);
+    }
+
+    /* ============================================================
+       HINT BAR
+       ============================================================ */
+    function showHintBar() {
+        if (hintBar) hintBar.classList.remove('hidden');
+    }
+
+    function hideHintBar() {
+        if (hintBar) hintBar.classList.add('hidden');
+    }
+
+    function updateHints(ctx) {
+        if (!hintBar) return;
+        var hints = HINT_MAP[ctx] || HINT_MAP.launcher;
+        var html = '';
+        for (var i = 0; i < hints.length; i++) {
+            html += '<div class="hint-item">' +
+                '<span class="hint-btn">' + hints[i].btn + '</span>' +
+                '<span class="hint-label">' + hints[i].label + '</span>' +
+            '</div>';
+        }
+        hintBar.innerHTML = html;
     }
 
     /* ============================================================
@@ -76,6 +145,9 @@ var GamepadInput = (function () {
         var ctx = InputManager.getContext();
 
         switch (ctx) {
+            case 'file_preview':
+                handleFilePreviewInput(justPressed, buttons, axes, timestamp);
+                break;
             case 'overlay':
                 handleOverlayInput(justPressed, buttons, axes, timestamp);
                 break;
@@ -137,6 +209,33 @@ var GamepadInput = (function () {
         if (justPressed[BTN_LB])    InputManager.emit(A.TAB_PREV);
         if (justPressed[BTN_RB])    InputManager.emit(A.TAB_NEXT);
         if (justPressed[BTN_START]) InputManager.emit(A.MENU);
+    }
+
+    /* ============================================================
+       FILE PREVIEW INPUT
+       B→close, D-pad Up/Down→scroll, A→download
+       ============================================================ */
+    function handleFilePreviewInput(justPressed, buttons, axes, timestamp) {
+        if (justPressed[BTN_B]) {
+            if (typeof FilePreview !== 'undefined') FilePreview.close();
+            return;
+        }
+
+        var dir = getDirections(justPressed, axes, timestamp);
+
+        if (dir.up) {
+            var content = document.querySelector('#file-preview-modal .preview-content');
+            if (content) content.scrollTop -= SCROLL_DELTA;
+        }
+        if (dir.down) {
+            var content2 = document.querySelector('#file-preview-modal .preview-content');
+            if (content2) content2.scrollTop += SCROLL_DELTA;
+        }
+
+        if (justPressed[BTN_A]) {
+            var dlBtn = document.getElementById('preview-download-btn');
+            if (dlBtn) dlBtn.click();
+        }
     }
 
     /* ============================================================

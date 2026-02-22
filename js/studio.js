@@ -16,8 +16,10 @@ var Studio = (function () {
     var featureGapFilter = 'all';
     var sortBy = 'name';
     var gridFocusIndex = -1;
+    var fileFocusIndex = -1;
     var lastSelectedPerTab = {};
     var currentNavTab = 'library';
+    var DETAIL_TABS = ['overview', 'status', 'commits', 'tests', 'devnotes', 'changelog', 'files'];
     var CACHE_TTL = 30000;
     var runningPollTimer = null;
     var POLL_INTERVAL = 3000;
@@ -132,12 +134,43 @@ var Studio = (function () {
 
         // Subscribe to InputManager actions
         var A = InputManager.ACTIONS;
-        InputManager.on(A.NAV_UP, function () { navigateGrid('up'); });
-        InputManager.on(A.NAV_DOWN, function () { navigateGrid('down'); });
-        InputManager.on(A.NAV_LEFT, function () { navigateGrid('left'); });
-        InputManager.on(A.NAV_RIGHT, function () { navigateGrid('right'); });
+        InputManager.on(A.NAV_UP, function () {
+            var ctx = InputManager.getContext();
+            if (ctx === 'detail_panel' && getActiveDetailTab() === 'files') {
+                navigateFileLinks('up');
+            } else if (ctx === 'launcher') {
+                navigateGrid('up');
+            }
+        });
+        InputManager.on(A.NAV_DOWN, function () {
+            var ctx = InputManager.getContext();
+            if (ctx === 'detail_panel' && getActiveDetailTab() === 'files') {
+                navigateFileLinks('down');
+            } else if (ctx === 'launcher') {
+                navigateGrid('down');
+            }
+        });
+        InputManager.on(A.NAV_LEFT, function () {
+            var ctx = InputManager.getContext();
+            if (ctx === 'detail_panel') {
+                cycleDetailTab(-1);
+            } else {
+                navigateGrid('left');
+            }
+        });
+        InputManager.on(A.NAV_RIGHT, function () {
+            var ctx = InputManager.getContext();
+            if (ctx === 'detail_panel') {
+                cycleDetailTab(1);
+            } else {
+                navigateGrid('right');
+            }
+        });
         InputManager.on(A.CONFIRM, function () {
-            if (selectedId) {
+            var ctx = InputManager.getContext();
+            if (ctx === 'detail_panel' && getActiveDetailTab() === 'files') {
+                openFocusedFile();
+            } else if (selectedId) {
                 var game = findGame(selectedId);
                 if (game) launchGame(game);
             }
@@ -148,8 +181,22 @@ var Studio = (function () {
         InputManager.on(A.INFO, function () {
             if (selectedId) openDetailPanel();
         });
-        InputManager.on(A.TAB_PREV, function () { cycleNavTab(-1); });
-        InputManager.on(A.TAB_NEXT, function () { cycleNavTab(1); });
+        InputManager.on(A.TAB_PREV, function () {
+            var ctx = InputManager.getContext();
+            if (ctx === 'detail_panel') {
+                cycleDetailTab(-1);
+            } else {
+                cycleNavTab(-1);
+            }
+        });
+        InputManager.on(A.TAB_NEXT, function () {
+            var ctx = InputManager.getContext();
+            if (ctx === 'detail_panel') {
+                cycleDetailTab(1);
+            } else {
+                cycleNavTab(1);
+            }
+        });
 
         // Start polling for running games
         startRunningPoll();
@@ -790,6 +837,61 @@ var Studio = (function () {
     }
 
     /* ============================================================
+       DETAIL TAB CYCLING — LB/RB & D-pad Left/Right in detail_panel
+       ============================================================ */
+    function getActiveDetailTab() {
+        if (!selectedId) return 'overview';
+        return activeTab[selectedId] || 'overview';
+    }
+
+    function cycleDetailTab(dir) {
+        if (!selectedId) return;
+        var current = getActiveDetailTab();
+        var idx = DETAIL_TABS.indexOf(current);
+        if (idx === -1) idx = 0;
+        idx += dir;
+        if (idx < 0) idx = DETAIL_TABS.length - 1;
+        if (idx >= DETAIL_TABS.length) idx = 0;
+        activeTab[selectedId] = DETAIL_TABS[idx];
+        fileFocusIndex = -1;
+        renderDetailPanel();
+    }
+
+    /* ============================================================
+       FILE LINK NAVIGATION — D-pad Up/Down in Files tab
+       ============================================================ */
+    function navigateFileLinks(direction) {
+        if (!detailEl) return;
+        var links = detailEl.querySelectorAll('.file-link');
+        if (links.length === 0) return;
+
+        if (direction === 'down') {
+            fileFocusIndex++;
+            if (fileFocusIndex >= links.length) fileFocusIndex = 0;
+        } else {
+            fileFocusIndex--;
+            if (fileFocusIndex < 0) fileFocusIndex = links.length - 1;
+        }
+
+        // Update focus classes
+        links.forEach(function (link) { link.classList.remove('gamepad-focus'); });
+        links[fileFocusIndex].classList.add('gamepad-focus');
+        links[fileFocusIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function openFocusedFile() {
+        if (!detailEl || fileFocusIndex < 0) return;
+        var links = detailEl.querySelectorAll('.file-link');
+        if (fileFocusIndex >= links.length) return;
+        var link = links[fileFocusIndex];
+        if (link.dataset.path && !link.classList.contains('disabled')) {
+            if (typeof FilePreview !== 'undefined') {
+                FilePreview.open(link.dataset.path);
+            }
+        }
+    }
+
+    /* ============================================================
        SELECTION
        ============================================================ */
     function selectGame(gameId) {
@@ -825,6 +927,7 @@ var Studio = (function () {
     function closeDetailPanel() {
         if (detailEl && detailEl.classList.contains('open')) {
             detailEl.classList.remove('open');
+            fileFocusIndex = -1;
             setTimeout(function () {
                 if (!detailEl.classList.contains('open')) {
                     detailEl.classList.add('hidden');

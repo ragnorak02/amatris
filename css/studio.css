@@ -1354,6 +1354,62 @@ h4.md-h, h5.md-h, h6.md-h { font-size: 0.85rem; }
 }
 
 /* ============================================================
+   FILE LINK GAMEPAD FOCUS
+   ============================================================ */
+.file-link.gamepad-focus {
+    background: rgba(240, 200, 80, 0.1);
+    color: #f0c850;
+    box-shadow: inset 2px 0 0 #f0c850;
+}
+
+/* ============================================================
+   CONTROLLER HINT BAR — Fixed bottom strip
+   ============================================================ */
+#controller-hints {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 8px 20px;
+    background: rgba(6, 6, 16, 0.88);
+    border-top: 1px solid rgba(240, 200, 80, 0.12);
+    backdrop-filter: blur(8px);
+}
+
+#controller-hints.hidden { display: none; }
+
+.hint-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hint-btn {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(240, 200, 80, 0.15);
+    border: 1px solid rgba(240, 200, 80, 0.3);
+    color: #f0c850;
+    white-space: nowrap;
+}
+
+.hint-label {
+    font-size: 0.68rem;
+    color: #a09880;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+/* ============================================================
    RESPONSIVE — Hide sidebar on narrow screens
    ============================================================ */
 @media (max-width: 900px) {
