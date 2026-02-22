@@ -1,6 +1,6 @@
 /* ============================================================
-   Amatris — Game Portal Styles
-   Dark fantasy night theme with carousel game launcher.
+   AMATRIS — Game Portal Styles
+   Dark tactical theme with studio launcher.
    ============================================================ */
 
 /* --- Reset & Base --- */
@@ -88,22 +88,6 @@ body {
     opacity: 1;
 }
 
-/* Drifting clouds */
-.cloud {
-    position: absolute;
-    width: 500px;
-    height: 80px;
-    background: radial-gradient(ellipse, rgba(180, 180, 210, 0.3) 0%, transparent 70%);
-    border-radius: 50%;
-    animation: drift linear infinite;
-    left: -500px;
-}
-
-@keyframes drift {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(calc(100vw + 1000px)); }
-}
-
 /* --- Header / Logo --- */
 #portal-header {
     position: relative;
@@ -114,7 +98,7 @@ body {
 
 .logo {
     font-size: 2.4rem;
-    font-weight: 300;
+    font-weight: 600;
     letter-spacing: 0.35em;
     text-transform: uppercase;
     color: #b8b0a0;

@@ -1,5 +1,5 @@
 /* ============================================================
-   input-manager.js — Input abstraction layer for Amatris
+   input-manager.js — Input abstraction layer for AMATRIS
    Semantic action pub/sub + context stack.
    Keyboard and gamepad both emit to the same bus.
    ============================================================ */

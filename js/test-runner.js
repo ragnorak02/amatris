@@ -1,5 +1,5 @@
 /* ============================================================
-   test-runner.js — Test Runner for Amatris Studio OS
+   test-runner.js — Test Runner for AMATRIS Studio OS
    Triggers tests via server API, shows live results, updates
    health indicators in the studio dashboard and overlay.
    ============================================================ */

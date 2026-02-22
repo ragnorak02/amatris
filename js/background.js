@@ -1,5 +1,5 @@
 /* ============================================================
-   background.js — Starry night sky, moon, and drifting clouds
+   background.js — Starry night sky background
    Renders procedural stars on a canvas layer.
    ============================================================ */
 
@@ -28,18 +28,8 @@ const Background = (() => {
         }
     }
 
-    /* Drift clouds slowly across the screen */
+    /* Cloud animation removed — tactical theme */
     function animateClouds() {
-        const cloudLayer = document.getElementById('bg-clouds');
-        for (let i = 0; i < 5; i++) {
-            const cloud = document.createElement('div');
-            cloud.className = 'cloud';
-            cloud.style.top = (10 + Math.random() * 40) + '%';
-            cloud.style.animationDuration = (40 + Math.random() * 40) + 's';
-            cloud.style.animationDelay = (-Math.random() * 60) + 's';
-            cloud.style.opacity = 0.08 + Math.random() * 0.1;
-            cloudLayer.appendChild(cloud);
-        }
     }
 
     return { init };

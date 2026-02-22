@@ -1,5 +1,5 @@
 /* ============================================================
-   games.js — Mock game data for the Amatris portal
+   games.js — Mock game data for the AMATRIS portal
    Add new games by appending to this array.
    ============================================================ */
 

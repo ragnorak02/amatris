@@ -1,5 +1,5 @@
 /* ============================================================
-   server.js — Amatris Studio OS server
+   server.js — AMATRIS Studio OS server
    Serves the portal UI and provides endpoints for launching
    games, system stats, game management, and Studio OS APIs.
 
@@ -898,7 +898,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`\n  \uD83C\uDF19 Amatris running at http://localhost:${PORT}\n`);
+    console.log(`\n  \uD83D\uDD25 AMATRIS running at http://localhost:${PORT}\n`);
     if (IS_PKG) {
         exec(`start http://localhost:${PORT}`);
     }

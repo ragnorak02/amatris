@@ -1,5 +1,5 @@
 /* ============================================================
-   studio.js — Studio Dashboard for Amatris
+   studio.js — Studio Dashboard for AMATRIS
    Sidebar + dense portrait card grid with InputManager wiring.
    ============================================================ */
 
