@@ -332,6 +332,48 @@ function getGames(res) {
                 ? 'complete' : (complianceMap['CLAUDE.md'] ? 'partial' : 'missing')
         };
 
+        // ---- Validate project_status.json required keys ----
+        const validation = { valid: true, errors: [] };
+        if (!projectStatus) {
+            validation.valid = false;
+            validation.errors.push('project_status.json missing');
+        } else {
+            const requiredKeys = ['schemaVersion', 'gameId', 'title', 'lastUpdated',
+                                  'health', 'tech', 'features', 'milestones', 'testing', 'links'];
+            for (const k of requiredKeys) {
+                if (!(k in projectStatus)) {
+                    validation.valid = false;
+                    validation.errors.push('Missing key: ' + k);
+                }
+            }
+            if (projectStatus.features) {
+                const FEATURE_KEYS = ['controllerSupport','achievementsSystem','testScripts',
+                                      'saveSystem','settingsMenu','audio','vfx'];
+                const FEATURE_VALUES = new Set(['unknown','missing','partial','complete']);
+                for (const fk of FEATURE_KEYS) {
+                    if (!(fk in projectStatus.features)) {
+                        validation.errors.push('Missing feature: ' + fk);
+                    } else if (!FEATURE_VALUES.has(projectStatus.features[fk])) {
+                        validation.errors.push('Invalid feature value: ' + fk);
+                    }
+                }
+            }
+            if (validation.errors.length > 0) validation.valid = false;
+        }
+
+        // ---- Read test_results.json for counts ----
+        let testResults = null;
+        const testResultsPath = path.join(folderPath, 'tests', 'test_results.json');
+        try {
+            testResults = JSON.parse(fs.readFileSync(testResultsPath, 'utf8'));
+        } catch (e) { /* no test results file */ }
+
+        const psTesting = projectStatus ? projectStatus.testing : null;
+        const testStatus = psTesting ? psTesting.status : 'unknown';
+        const healthColor = testStatus === 'pass' ? 'green' :
+                            testStatus === 'fail' ? 'red' :
+                            testStatus === 'error' ? 'red' : 'gray';
+
         const dashboard = {
             compliance: {
                 hasClaudeMd: complianceMap['CLAUDE.md'],
@@ -355,7 +397,8 @@ function getGames(res) {
                 lastStatusUpdate: ps.lastUpdated || null
             },
             featureFlags: featureFlags,
-            categoryCompletion: { graphics: null, gameplay: null, menus: null, controls: null, music: null }
+            categoryCompletion: { graphics: null, gameplay: null, menus: null, controls: null, music: null },
+            validation: validation
         };
 
         results.push({
@@ -374,7 +417,13 @@ function getGames(res) {
             tags: tags,
             hasTestRunner: hasTestRunner,
             health: {
-                tests: { status: hasTestRunner ? 'gray' : 'gray', total: 0, passed: 0, lastRun: null },
+                tests: {
+                    status: healthColor,
+                    total: testResults ? testResults.testsTotal : 0,
+                    passed: testResults ? testResults.testsPassed : 0,
+                    failed: testResults ? (testResults.testsFailed || 0) : 0,
+                    lastRun: (testResults && testResults.timestamp) || (psTesting && psTesting.lastRunAt) || null
+                },
                 build: 'unknown',
                 lastCommit: meta.lastGameplayUpdate || null
             },

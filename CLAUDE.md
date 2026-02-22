@@ -85,17 +85,17 @@ It reads JSON only.
 
 ## Status Indicators
 - [x] project_status.json timestamps displayed correctly
-- [ ] Test health color coded:
-    - [ ] Green = Pass
-    - [ ] Orange = Warning
-    - [ ] Red = Fail
-    - [ ] Grey = Not Run
-- [ ] Non-compliant repo flagged visually
+- [x] Test health color coded:
+    - [x] Green = Pass
+    - [x] Orange = Warning
+    - [x] Red = Fail
+    - [x] Grey = Not Run
+- [x] Non-compliant repo flagged visually
 
 ## Automation Contract
-- [ ] Enforce presence of required JSON keys
+- [x] Enforce presence of required JSON keys
 - [x] Highlight stale repos (no update in X days)
-- [ ] Highlight failing tests
+- [x] Highlight failing tests
 
 Amatris MUST NOT:
 - Modify CLAUDE.md automatically

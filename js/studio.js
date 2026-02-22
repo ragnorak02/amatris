@@ -957,7 +957,7 @@ var Studio = (function () {
         var game = findGame(selectedId);
         if (!game) return;
 
-        var healthDot = game.health.tests.status || 'gray';
+        var healthDot = (game.health && game.health.tests) ? game.health.tests.status : 'gray';
         var healthText = healthDot === 'green' ? 'Pass' :
                          healthDot === 'orange' ? 'Warn' :
                          healthDot === 'red' ? 'Fail' : 'N/A';
@@ -1048,7 +1048,7 @@ var Studio = (function () {
             case 'commits':
                 return '<div class="stub-message">Commit history will appear here</div>';
             case 'tests':
-                return '<div class="stub-message">Test results will appear here</div>';
+                return renderTestsTab(game);
             case 'devnotes':
                 return '<div class="detail-notes">' + escapeHtml(game.devNotes || 'No dev notes.') + '</div>';
             case 'changelog':
@@ -1196,6 +1196,81 @@ var Studio = (function () {
             '</div>';
         }
         html += '</div>';
+        return html;
+    }
+
+    function renderTestsTab(game) {
+        var ts = game.testingStatus || {};
+        var ht = (game.health && game.health.tests) ? game.health.tests : {};
+        var st = ts.status || 'unknown';
+        var dotCls = st === 'pass' ? 'green' : st === 'fail' ? 'red' : st === 'error' ? 'orange' : 'gray';
+        var label = st === 'pass' ? 'Pass' : st === 'fail' ? 'Fail' : st === 'error' ? 'Error' : 'Not Run';
+
+        var html = '<div class="status-section">';
+        html += '<div class="status-section-title">Test Health</div>';
+        html += '<div class="detail-overview">';
+
+        html += '<div class="detail-card">';
+        html += '<div class="detail-card-label">Status</div>';
+        html += '<div class="detail-card-value"><span class="health-dot ' + dotCls + '"></span>' + label + '</div>';
+        html += '</div>';
+
+        html += '<div class="detail-card">';
+        html += '<div class="detail-card-label">Passed</div>';
+        html += '<div class="detail-card-value">' + (ht.passed || 0) + '</div>';
+        html += '</div>';
+
+        html += '<div class="detail-card">';
+        html += '<div class="detail-card-label">Failed</div>';
+        html += '<div class="detail-card-value">' + (ht.failed || 0) + '</div>';
+        html += '</div>';
+
+        html += '<div class="detail-card">';
+        html += '<div class="detail-card-label">Total</div>';
+        html += '<div class="detail-card-value">' + (ht.total || 0) + '</div>';
+        html += '</div>';
+
+        html += '</div>'; // end detail-overview
+
+        if (ht.lastRun) {
+            var d = new Date(ht.lastRun);
+            var mo = d.getMonth() + 1;
+            var dy = d.getDate();
+            var hr = d.getHours();
+            var mn = String(d.getMinutes()).padStart(2, '0');
+            var ampm = hr >= 12 ? 'pm' : 'am';
+            var hr12 = hr % 12 || 12;
+            html += '<div style="font-size:0.78rem;color:var(--text-dim);margin-top:0.5rem">Last Run: ' + mo + '/' + dy + ' ' + hr12 + ':' + mn + ampm + '</div>';
+        }
+
+        if (ts.notes) {
+            html += '<div style="font-size:0.78rem;color:var(--text-dim);margin-top:0.4rem">' + escapeHtml(ts.notes) + '</div>';
+        }
+
+        html += '</div>'; // end status-section
+
+        // Show cached live test results if available
+        try {
+            var cached = sessionStorage.getItem('test-result-' + game.id);
+            if (cached) {
+                var res = JSON.parse(cached);
+                if (res.details && res.details.length > 0) {
+                    html += '<div class="status-section">';
+                    html += '<div class="status-section-title">Suite Results</div>';
+                    for (var i = 0; i < res.details.length; i++) {
+                        var suite = res.details[i];
+                        var sIcon = suite.passed ? '\u2713' : '\u2717';
+                        var sClr = suite.passed ? 'var(--green)' : 'var(--red)';
+                        html += '<div class="milestone-row">';
+                        html += '<span class="milestone-check" style="color:' + sClr + '">' + sIcon + '</span>';
+                        html += '<span class="milestone-label">' + escapeHtml(suite.name || suite.suite || ('Test ' + (i + 1))) + '</span>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                }
+            }
+        } catch (e) { /* ignore */ }
+
         return html;
     }
 

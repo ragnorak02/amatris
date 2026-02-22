@@ -264,6 +264,12 @@
   }
   .th-resize-handle:hover, .th-resize-handle.active { background: var(--gold); opacity: 0.6; }
 
+  /* ---- Test health / compliance row indicators ---- */
+  .game-row.test-fail { border-left: 3px solid var(--red); }
+  .game-row.test-error { border-left: 3px solid var(--orange); }
+  .game-row.non-compliant { opacity: 0.75; }
+  .warn-icon { color: var(--orange); font-size: 0.72rem; margin-left: 3px; cursor: help; }
+
   /* ---- Category column toggle ---- */
   .cat-hidden .cat-col { display: none; }
 </style>
@@ -302,7 +308,7 @@
   <table>
     <thead>
       <tr>
-        <th class="gc" colspan="8">Core</th>
+        <th class="gc" colspan="9">Core</th>
         <th class="gf" colspan="5">Features</th>
         <th class="gp" colspan="5">Compliance</th>
         <th class="gk cat-col" colspan="5">Categories</th>
@@ -317,6 +323,7 @@
         <th data-sort="completion" style="width:80px">Comp% <span class="sa"></span></th>
         <th data-sort="status" style="width:52px">Status</th>
         <th class="al" style="width:92px">Next Step</th>
+        <th data-sort="testHealth" style="width:60px">Test Health <span class="sa"></span></th>
         <th data-sort="controllerSupport" style="width:54px">Controller</th>
         <th data-sort="firstVisualUpgrade" style="width:54px">1st Visual</th>
         <th data-sort="achievements" style="width:54px">Achieve.</th>
@@ -338,7 +345,7 @@
       </tr>
     </thead>
     <tbody id="tBody">
-      <tr><td colspan="26" class="loading">Loading game data...</td></tr>
+      <tr><td colspan="27" class="loading">Loading game data...</td></tr>
     </tbody>
   </table>
 </div>
@@ -369,7 +376,7 @@
       return data;
     }).catch(function(err) {
       console.error('[Dashboard] Fetch failed:', err);
-      tbody.innerHTML = '<tr><td colspan="26" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="27" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
       return [];
     });
   }
@@ -489,11 +496,25 @@
     return 'Early dev';
   }
 
+  function testHealthCell(g) {
+    var ts = g.testingStatus || {};
+    var st = ts.status || 'unknown';
+    var clr = st === 'pass' ? 'var(--green)' :
+              st === 'fail' ? 'var(--red)' :
+              st === 'error' ? 'var(--orange)' : 'var(--text-dark)';
+    var icon = st === 'pass' ? '\u2713' : st === 'fail' ? '\u2717' : st === 'error' ? '!' : '\u2014';
+    var label = st === 'pass' ? 'Pass' : st === 'fail' ? 'Fail' : st === 'error' ? 'Error' : 'N/A';
+    var h = g.health ? g.health.tests : {};
+    var tip = label;
+    if (h && h.total > 0) tip += ' (' + (h.passed || 0) + '/' + h.total + ')';
+    return '<span style="color:' + clr + ';font-weight:600" title="' + tip + '">' + icon + ' ' + label + '</span>';
+  }
+
   /* ---- Render table ---- */
   function renderTable(games) {
     gcEl.textContent = games.length + ' game' + (games.length !== 1 ? 's' : '');
     if (!games.length) {
-      tbody.innerHTML = '<tr><td colspan="26" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="27" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
       return;
     }
     var h = '';
@@ -505,7 +526,13 @@
       var dt = d.dates || {};
       var ex = expandedId === g.id;
 
-      h += '<tr data-id="' + g.id + '" class="game-row">';
+      var rowCls = 'game-row';
+      var _ts = g.testingStatus || {};
+      if (_ts.status === 'fail') rowCls += ' test-fail';
+      if (_ts.status === 'error') rowCls += ' test-error';
+      var _v = d.validation || {};
+      if (!_v.valid) rowCls += ' non-compliant';
+      h += '<tr data-id="' + g.id + '" class="' + rowCls + '">';
       /* Core */
       h += '<td class="ci">' + (i + 1) + '</td>';
       h += '<td><button class="play-btn" data-game="' + g.id + '" data-name="' + esc(g.name) + '" title="Launch ' + esc(g.name) + '">\u25B6</button></td>';
@@ -513,12 +540,16 @@
       if (c.missingFiles && c.missingFiles.length > 0 && (c.complianceScore || 0) < 5) {
         h += '<span class="mpill" title="Missing: ' + esc(c.missingFiles.join(', ')) + '">' + c.missingFiles.length + ' gaps</span>';
       }
+      if (_v.valid === false) {
+        h += '<span class="warn-icon" title="' + esc((_v.errors || []).join('; ')) + '">\u26A0</span>';
+      }
       h += '</td>';
       h += '<td class="' + engCls(g.engineType) + '">' + esc(g.engine) + '</td>';
       h += '<td class="' + phsCls(g.phase) + '">' + esc(g.phase) + '</td>';
       h += '<td>' + compBar(g.completion || 0) + '</td>';
       h += '<td><span class="sa-' + g.status + '">' + esc(g.status) + '</span></td>';
       h += '<td class="al" style="font-size:0.68rem;color:var(--text-dim)">' + nextStep(g) + '</td>';
+      h += '<td>' + testHealthCell(g) + '</td>';
       /* Features */
       h += '<td>' + triIcon(f.controllerSupport) + '</td>';
       h += '<td>' + triIcon(f.firstVisualUpgrade) + '</td>';
@@ -556,7 +587,7 @@
     var tech = g.tech || {};
     var ts = g.testingStatus || {};
 
-    var h = '<tr class="expand-row"><td colspan="26"><div class="ex-content">';
+    var h = '<tr class="expand-row"><td colspan="27"><div class="ex-content">';
 
     /* Left: compliance grid */
     h += '<div class="ex-section"><h4>File Compliance (' + (c.complianceScore || 0) + '/8)</h4><div class="ex-grid">';
@@ -588,7 +619,17 @@
     if (tech.languages && tech.languages.length) h += '<div class="ex-item">Languages: ' + esc(tech.languages.join(', ')) + '</div>';
     if (tech.graphicsType) h += '<div class="ex-item">Graphics: ' + esc(tech.graphicsType) + '</div>';
     h += '<h4 style="margin-top:0.6rem">Testing</h4>';
-    if (ts.status) h += '<div class="ex-item">Status: ' + esc(ts.status) + '</div>';
+    if (ts.status) {
+      var _tClr = ts.status === 'pass' ? 'var(--green)' : ts.status === 'fail' ? 'var(--red)' : ts.status === 'error' ? 'var(--orange)' : 'var(--text-dim)';
+      h += '<div class="ex-item">Status: <span style="color:' + _tClr + ';font-weight:600">' + esc(ts.status) + '</span></div>';
+    }
+    var _ht = g.health ? g.health.tests : {};
+    if (_ht && _ht.total > 0) {
+      h += '<div class="ex-item">Tests: ' + (_ht.passed || 0) + ' passed / ' + (_ht.failed || 0) + ' failed / ' + _ht.total + ' total</div>';
+    }
+    if (_ht && _ht.lastRun) {
+      h += '<div class="ex-item">Last Run: ' + fmtTimestamp(_ht.lastRun) + '</div>';
+    }
     if (ts.notes) h += '<div class="ex-item" style="white-space:normal">' + esc(ts.notes) + '</div>';
     h += '<div id="tr-' + g.id + '"></div>';
     h += '</div>';
@@ -626,6 +667,10 @@
         var lcf = d.dates && d.dates.lastCodeFile ? d.dates.lastCodeFile : '';
         var lcExt = lcf.lastIndexOf('.') !== -1 ? lcf.substring(lcf.lastIndexOf('.')) : '';
         return lcExt || 'zzz';
+      case 'testHealth':
+        var ths = g.testingStatus || {};
+        var thst = ths.status || 'unknown';
+        return thst === 'pass' ? 0 : thst === 'fail' ? 1 : thst === 'error' ? 2 : 3;
       case 'controllerSupport':
       case 'firstVisualUpgrade':
       case 'achievements':
@@ -797,7 +842,7 @@
 
   /* ---- Refresh ---- */
   document.getElementById('refreshBtn').addEventListener('click', function() {
-    tbody.innerHTML = '<tr><td colspan="26" class="loading">Refreshing...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="27" class="loading">Refreshing...</td></tr>';
     loadData().then(function(games) { allGames = games; filterAndRender(); });
   });
 
