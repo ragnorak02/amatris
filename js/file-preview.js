@@ -1,27 +1,35 @@
 /* ============================================================
-   file-preview.js — File preview side panel
+   file-preview.js — File preview modal
    Fetches file content via /api/file, renders by extension:
-   .md → markdown, .json → pretty-print, others → code view.
+   .md → markdown, .json → colorized pretty-print, others → code view.
    ============================================================ */
 
 var FilePreview = (function () {
     'use strict';
 
-    var panelEl, titleEl, contentEl, actionsEl;
+    var modalEl, dialogEl, backdropEl, titleEl, badgeEl, contentEl, metaEl;
     var currentPath = null;
 
     function init() {
-        panelEl = document.getElementById('file-preview-panel');
-        if (!panelEl) return;
+        modalEl = document.getElementById('file-preview-modal');
+        if (!modalEl) return;
 
-        titleEl = panelEl.querySelector('.preview-title');
-        contentEl = panelEl.querySelector('.preview-content');
-        actionsEl = panelEl.querySelector('.preview-actions');
+        dialogEl = modalEl.querySelector('.preview-dialog');
+        backdropEl = modalEl.querySelector('.preview-backdrop');
+        titleEl = modalEl.querySelector('.preview-title');
+        badgeEl = document.getElementById('preview-type-badge');
+        contentEl = modalEl.querySelector('.preview-content');
+        metaEl = document.getElementById('preview-meta-inline');
 
         // Close button
-        var closeBtn = panelEl.querySelector('.preview-close-btn');
+        var closeBtn = modalEl.querySelector('.preview-close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', close);
+        }
+
+        // Backdrop click closes modal
+        if (backdropEl) {
+            backdropEl.addEventListener('click', close);
         }
 
         // Download button
@@ -39,26 +47,39 @@ var FilePreview = (function () {
 
         // Escape key closes preview
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && panelEl.classList.contains('open')) {
+            if (e.key === 'Escape' && modalEl.classList.contains('open')) {
                 close();
+                e.preventDefault();
+                e.stopPropagation();
             }
         });
     }
 
     function open(filePath) {
-        if (!panelEl) return;
+        if (!modalEl) return;
 
         currentPath = filePath;
         var fileName = filePath.split('/').pop();
+        var ext = getExt(fileName);
+
         if (titleEl) titleEl.textContent = fileName;
+        updateBadge(ext);
 
         // Show loading state
         if (contentEl) {
             contentEl.innerHTML = '<div class="stub-message">Loading...</div>';
         }
+        if (metaEl) metaEl.textContent = '';
 
-        panelEl.classList.remove('hidden');
-        panelEl.classList.add('open');
+        modalEl.classList.remove('hidden');
+        // Force reflow so the transition works
+        modalEl.offsetHeight;
+        modalEl.classList.add('open');
+
+        // Push InputManager context if available
+        if (typeof InputManager !== 'undefined' && InputManager.pushContext) {
+            InputManager.pushContext('file_preview');
+        }
 
         // Fetch file content
         fetch('/api/file?path=' + encodeURIComponent(filePath))
@@ -76,24 +97,36 @@ var FilePreview = (function () {
             });
     }
 
+    function updateBadge(ext) {
+        if (!badgeEl) return;
+        switch (ext) {
+            case '.md':
+                badgeEl.textContent = 'MD';
+                badgeEl.className = 'preview-type-badge badge-md';
+                break;
+            case '.json':
+                badgeEl.textContent = 'JSON';
+                badgeEl.className = 'preview-type-badge badge-json';
+                break;
+            default:
+                badgeEl.textContent = ext ? ext.replace('.', '').toUpperCase() : 'FILE';
+                badgeEl.className = 'preview-type-badge badge-code';
+                break;
+        }
+    }
+
     function renderContent(data) {
         if (!contentEl) return;
 
         var ext = (data.ext || '').toLowerCase();
         var html = '';
 
-        // File metadata bar
-        html += '<div class="preview-meta">' +
-            '<span>' + escapeHtml(data.path) + '</span>' +
-            '<span>' + formatSize(data.size) + '</span>' +
-        '</div>';
-
         switch (ext) {
             case '.md':
                 html += '<div class="preview-markdown">' + renderMarkdown(data.content) + '</div>';
                 break;
             case '.json':
-                html += '<pre class="preview-code preview-json">' + renderJson(data.content) + '</pre>';
+                html += '<pre class="preview-code preview-json">' + colorizeJson(data.content) + '</pre>';
                 break;
             default:
                 html += '<pre class="preview-code">' + escapeHtml(data.content) + '</pre>';
@@ -101,6 +134,15 @@ var FilePreview = (function () {
         }
 
         contentEl.innerHTML = html;
+
+        // Update footer meta
+        if (metaEl) {
+            var parts = [escapeHtml(data.path), formatSize(data.size)];
+            if (data.modified) {
+                parts.push('Modified: ' + formatDate(data.modified));
+            }
+            metaEl.innerHTML = parts.join(' &bull; ');
+        }
     }
 
     /* ============================================================
@@ -237,33 +279,154 @@ var FilePreview = (function () {
         s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
         // Inline code
         s = s.replace(/`([^`]+)`/g, '<code class="md-inline-code">$1</code>');
+        // Links [text](url) — only http, https, mailto, or relative paths
+        s = s.replace(/\[([^\]]+)\]\(((?:https?:\/\/|mailto:|[./])[^)]*)\)/g,
+            '<a class="md-link" href="$2" target="_blank" rel="noopener">$1</a>');
         return s;
     }
 
     /* ============================================================
-       JSON RENDERER — Pretty-print with syntax highlighting
+       JSON RENDERER — Colorized syntax highlighting
        ============================================================ */
-    function renderJson(content) {
+    function colorizeJson(content) {
         try {
             var parsed = JSON.parse(content);
             var pretty = JSON.stringify(parsed, null, 2);
-            return escapeHtml(pretty);
+            return colorizeJsonString(pretty);
         } catch (e) {
             return escapeHtml(content);
         }
+    }
+
+    function colorizeJsonString(str) {
+        var result = '';
+        var i = 0;
+        var len = str.length;
+
+        while (i < len) {
+            var ch = str[i];
+
+            // String
+            if (ch === '"') {
+                var strVal = readJsonString(str, i);
+                var escaped = escapeHtml(strVal);
+                // Check if this is a key (followed by colon)
+                var afterStr = i + strVal.length;
+                var next = skipWhitespace(str, afterStr);
+                if (next < len && str[next] === ':') {
+                    result += '<span class="json-key">' + escaped + '</span>';
+                } else {
+                    result += '<span class="json-str">' + escaped + '</span>';
+                }
+                i += strVal.length;
+                continue;
+            }
+
+            // Number
+            if (ch === '-' || (ch >= '0' && ch <= '9')) {
+                var numStr = readJsonNumber(str, i);
+                result += '<span class="json-num">' + escapeHtml(numStr) + '</span>';
+                i += numStr.length;
+                continue;
+            }
+
+            // Boolean / null
+            if (str.substr(i, 4) === 'true') {
+                result += '<span class="json-bool">true</span>';
+                i += 4;
+                continue;
+            }
+            if (str.substr(i, 5) === 'false') {
+                result += '<span class="json-bool">false</span>';
+                i += 5;
+                continue;
+            }
+            if (str.substr(i, 4) === 'null') {
+                result += '<span class="json-null">null</span>';
+                i += 4;
+                continue;
+            }
+
+            // Brackets and braces
+            if (ch === '{' || ch === '}' || ch === '[' || ch === ']') {
+                result += '<span class="json-bracket">' + ch + '</span>';
+                i++;
+                continue;
+            }
+
+            // Everything else (whitespace, commas, colons)
+            result += escapeHtml(ch);
+            i++;
+        }
+
+        return result;
+    }
+
+    function readJsonString(str, start) {
+        var i = start + 1; // skip opening quote
+        while (i < str.length) {
+            if (str[i] === '\\') {
+                i += 2; // skip escaped character
+            } else if (str[i] === '"') {
+                return str.substring(start, i + 1);
+            } else {
+                i++;
+            }
+        }
+        return str.substring(start);
+    }
+
+    function readJsonNumber(str, start) {
+        var i = start;
+        if (str[i] === '-') i++;
+        while (i < str.length && str[i] >= '0' && str[i] <= '9') i++;
+        if (i < str.length && str[i] === '.') {
+            i++;
+            while (i < str.length && str[i] >= '0' && str[i] <= '9') i++;
+        }
+        if (i < str.length && (str[i] === 'e' || str[i] === 'E')) {
+            i++;
+            if (i < str.length && (str[i] === '+' || str[i] === '-')) i++;
+            while (i < str.length && str[i] >= '0' && str[i] <= '9') i++;
+        }
+        return str.substring(start, i);
+    }
+
+    function skipWhitespace(str, i) {
+        while (i < str.length && (str[i] === ' ' || str[i] === '\n' || str[i] === '\r' || str[i] === '\t')) i++;
+        return i;
     }
 
     /* ============================================================
        UTILITIES
        ============================================================ */
     function close() {
-        if (!panelEl) return;
-        panelEl.classList.remove('open');
+        if (!modalEl) return;
+        modalEl.classList.remove('open');
         currentPath = null;
+
+        // Pop InputManager context if available
+        if (typeof InputManager !== 'undefined' && InputManager.popContext && InputManager.getContext) {
+            if (InputManager.getContext() === 'file_preview') {
+                InputManager.popContext();
+            }
+        }
+
+        // Hide after transition
+        setTimeout(function () {
+            if (!modalEl.classList.contains('open')) {
+                modalEl.classList.add('hidden');
+            }
+        }, 300);
     }
 
     function isOpen() {
-        return panelEl && panelEl.classList.contains('open');
+        return modalEl && modalEl.classList.contains('open');
+    }
+
+    function getExt(filename) {
+        var dot = filename.lastIndexOf('.');
+        return dot !== -1 ? filename.substring(dot).toLowerCase() : '';
     }
 
     function escapeHtml(str) {
@@ -278,6 +441,14 @@ var FilePreview = (function () {
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function formatDate(isoStr) {
+        if (!isoStr) return '';
+        var d = new Date(isoStr);
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+            ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
 
     return { init: init, open: open, close: close, isOpen: isOpen };

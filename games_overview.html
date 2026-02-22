@@ -557,8 +557,10 @@
 
     /* Actions */
     h += '<div class="ex-actions">';
-    if (g.files && g.files.claudeMd) h += '<a href="/api/file?path=' + encodeURIComponent(g.files.claudeMd) + '" target="_blank">View CLAUDE.md</a>';
-    if (g.files && g.files.gameDirection) h += '<a href="/api/file?path=' + encodeURIComponent(g.files.gameDirection) + '" target="_blank">View Direction</a>';
+    if (g.files && g.files.claudeMd) h += '<button onclick="event.stopPropagation();openFP(\'' + esc(g.files.claudeMd) + '\')">View CLAUDE.md</button>';
+    if (g.files && g.files.gameDirection) h += '<button onclick="event.stopPropagation();openFP(\'' + esc(g.files.gameDirection) + '\')">View Direction</button>';
+    if (g.files && g.files.gameConfig) h += '<button onclick="event.stopPropagation();openFP(\'' + esc(g.files.gameConfig) + '\')">View Config</button>';
+    if (g.files && g.files.projectStatus) h += '<button onclick="event.stopPropagation();openFP(\'' + esc(g.files.projectStatus) + '\')">View Status</button>';
     if (g.hasTestRunner) h += '<button class="btn-t" onclick="event.stopPropagation();window._runTest(\'' + g.id + '\')">Run Tests</button>';
     h += '<span class="ex-folder">' + esc(g.folder) + '/</span>';
     h += '</div>';
@@ -823,6 +825,112 @@
     console.error('[Dashboard] Init error:', err);
   });
 })();
+</script>
+
+<!-- File Preview Modal -->
+<div id="fp-modal" style="display:none; position:fixed; inset:0; z-index:200; align-items:center; justify-content:center;">
+  <div id="fp-backdrop" style="position:absolute; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);"></div>
+  <div style="position:relative; width:680px; max-width:90vw; max-height:85vh; background:rgba(10,10,22,0.98); border:1px solid var(--border); border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,0.6); display:flex; flex-direction:column; overflow:hidden;">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--border); flex-shrink:0;">
+      <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+        <span id="fp-badge" style="font-size:0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:2px 8px; border-radius:4px; background:rgba(240,200,80,0.12); color:var(--gold-light);"></span>
+        <span id="fp-title" style="font-size:0.85rem; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+      </div>
+      <button onclick="closeFP()" style="background:none; border:none; color:var(--text-dim); font-size:1.2rem; cursor:pointer; padding:4px 8px;">&times;</button>
+    </div>
+    <div id="fp-content" style="flex:1; overflow-y:auto; padding:20px; font-size:0.82rem; color:var(--text-dim); line-height:1.6; min-height:0;"></div>
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 20px; border-top:1px solid var(--border); flex-shrink:0;">
+      <span id="fp-meta" style="font-size:0.68rem; color:var(--text-dark);"></span>
+      <button id="fp-dl" onclick="fpDownload()" style="padding:0.3rem 0.65rem; border-radius:5px; font-size:0.7rem; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--header-bg); color:var(--text-dim);">Download</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var _fpPath = null;
+
+function openFP(filePath) {
+  _fpPath = filePath;
+  var modal = document.getElementById('fp-modal');
+  var title = document.getElementById('fp-title');
+  var badge = document.getElementById('fp-badge');
+  var content = document.getElementById('fp-content');
+  var meta = document.getElementById('fp-meta');
+
+  var name = filePath.split('/').pop();
+  var ext = name.lastIndexOf('.') !== -1 ? name.substring(name.lastIndexOf('.')).toLowerCase() : '';
+  title.textContent = name;
+  badge.textContent = ext === '.json' ? 'JSON' : ext === '.md' ? 'MD' : ext.replace('.','').toUpperCase() || 'FILE';
+  content.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-dark)">Loading...</div>';
+  meta.textContent = '';
+  modal.style.display = 'flex';
+
+  document.getElementById('fp-backdrop').onclick = closeFP;
+  document.addEventListener('keydown', _fpEsc);
+
+  fetch('/api/file?path=' + encodeURIComponent(filePath))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { content.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red)">' + esc(data.error) + '</div>'; return; }
+
+      if (ext === '.json') {
+        try {
+          var pretty = JSON.stringify(JSON.parse(data.content), null, 2);
+          content.innerHTML = '<pre style="font-family:Consolas,monospace;font-size:0.78rem;line-height:1.5;color:var(--text-dim);white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,0.2);padding:12px;border-radius:6px;">' + _colorJson(pretty) + '</pre>';
+        } catch(e) {
+          content.innerHTML = '<pre style="white-space:pre-wrap;color:var(--text-dim)">' + esc(data.content) + '</pre>';
+        }
+      } else if (ext === '.md') {
+        content.innerHTML = '<div style="color:var(--text-dim);line-height:1.65">' + esc(data.content).replace(/\n/g, '<br>') + '</div>';
+      } else {
+        content.innerHTML = '<pre style="white-space:pre-wrap;color:var(--text-dim)">' + esc(data.content) + '</pre>';
+      }
+
+      var parts = [esc(data.path)];
+      if (data.size != null) {
+        var sz = data.size < 1024 ? data.size + ' B' : (data.size/1024).toFixed(1) + ' KB';
+        parts.push(sz);
+      }
+      if (data.modified) {
+        var d = new Date(data.modified);
+        parts.push('Modified: ' + d.toISOString().substring(0,16).replace('T',' '));
+      }
+      meta.textContent = parts.join(' \u2022 ');
+    })
+    .catch(function() { content.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red)">Failed to load file</div>'; });
+}
+
+function closeFP() {
+  document.getElementById('fp-modal').style.display = 'none';
+  document.removeEventListener('keydown', _fpEsc);
+  _fpPath = null;
+}
+
+function _fpEsc(e) { if (e.key === 'Escape') closeFP(); }
+
+function fpDownload() {
+  if (!_fpPath) return;
+  var a = document.createElement('a');
+  a.href = '/' + _fpPath;
+  a.download = _fpPath.split('/').pop();
+  a.click();
+}
+
+function _colorJson(str) {
+  // Simple regex-based colorizer for pre-formatted JSON
+  var h = esc(str);
+  // Keys: "key":
+  h = h.replace(/(&quot;[^&]*?&quot;)\s*:/g, '<span style="color:#f0c850">$1</span>:');
+  // String values (after colon or in arrays)
+  h = h.replace(/:\s*(&quot;[^&]*?&quot;)/g, function(m, v) { return ': <span style="color:#7ec8a0">' + v + '</span>'; });
+  // Booleans
+  h = h.replace(/\b(true|false)\b/g, '<span style="color:#d08060">$1</span>');
+  // Null
+  h = h.replace(/\bnull\b/g, '<span style="color:#706860;font-style:italic">null</span>');
+  // Numbers
+  h = h.replace(/:\s*(-?\d+\.?\d*(?:[eE][+-]?\d+)?)/g, function(m, n) { return ': <span style="color:#80c8f0">' + n + '</span>'; });
+  return h;
+}
 </script>
 </body>
 </html>

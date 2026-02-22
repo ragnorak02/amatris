@@ -1098,9 +1098,11 @@ var Studio = (function () {
 
     function renderFilesTab(game) {
         var files = [
-            { key: 'claudeMd', label: 'claude.md', icon: '\uD83D\uDCCB' },
+            { key: 'claudeMd', label: 'CLAUDE.md', icon: '\uD83D\uDCCB' },
             { key: 'gameDirection', label: 'game_direction.md', icon: '\uD83C\uDFAF' },
-            { key: 'testPlan', label: 'tests/', icon: '\uD83E\uDDEA' },
+            { key: 'gameConfig', label: 'game.config.json', icon: '\u2699\uFE0F' },
+            { key: 'projectStatus', label: 'project_status.json', icon: '\uD83D\uDCCA' },
+            { key: 'testResults', label: 'test_results.json', icon: '\uD83E\uDDEA' },
             { key: 'achievements', label: 'achievements.json', icon: '\uD83C\uDFC6' }
         ];
 
@@ -1111,11 +1113,14 @@ var Studio = (function () {
             var exists = !!filePath;
             html += '<div class="file-link' + (exists ? '' : ' disabled') + '" data-path="' + (filePath || '') + '">' +
                 '<span class="file-link-icon">' + f.icon + '</span>' +
-                '<span class="file-link-name">' + f.label + '</span>' +
-                '<span class="file-link-status ' + (exists ? 'exists' : 'missing') + '">' +
-                    (exists ? 'Found' : 'Missing') +
-                '</span>' +
-            '</div>';
+                '<span class="file-link-name">' + f.label + '</span>';
+            if (exists) {
+                html += '<span class="file-link-status exists">Found</span>';
+            } else {
+                html += '<span class="file-link-status missing" title="File not found in game directory">' +
+                    '\u24D8 Missing</span>';
+            }
+            html += '</div>';
         }
         html += '</div>';
         return html;

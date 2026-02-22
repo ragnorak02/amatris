@@ -352,7 +352,10 @@ function getGames(res) {
             files: {
                 claudeMd: claudeMdPath,
                 gameDirection: gameDirectionPath,
-                tests: testsDir,
+                gameConfig: complianceMap['game.config.json'] ? folderName + '/game.config.json' : null,
+                projectStatus: projectStatus ? folderName + '/project_status.json' : null,
+                testResults: fs.existsSync(path.join(folderPath, 'tests', 'test_results.json'))
+                    ? folderName + '/tests/test_results.json' : null,
                 achievements: achievementsPath
             },
             launch: {

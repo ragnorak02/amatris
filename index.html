@@ -69,15 +69,22 @@
     <!-- Detail panel overlay (shown when a game is selected) -->
     <div id="studio-detail-panel" class="hidden"></div>
 
-    <!-- File Preview Side Panel -->
-    <div id="file-preview-panel" class="hidden">
-        <div class="preview-header">
-            <span class="preview-title">File Preview</span>
-            <button class="preview-close-btn" title="Close">&times;</button>
-        </div>
-        <div class="preview-content"></div>
-        <div class="preview-actions">
-            <button class="toolbar-btn" id="preview-download-btn">Download</button>
+    <!-- File Preview Modal -->
+    <div id="file-preview-modal" class="hidden">
+        <div class="preview-backdrop"></div>
+        <div class="preview-dialog">
+            <div class="preview-header">
+                <div class="preview-header-left">
+                    <span class="preview-type-badge" id="preview-type-badge"></span>
+                    <span class="preview-title">File Preview</span>
+                </div>
+                <button class="preview-close-btn" title="Close">&times;</button>
+            </div>
+            <div class="preview-content"></div>
+            <div class="preview-footer">
+                <span class="preview-meta-inline" id="preview-meta-inline"></span>
+                <button class="toolbar-btn" id="preview-download-btn">Download</button>
+            </div>
         </div>
     </div>
 

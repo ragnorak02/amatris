@@ -1035,33 +1035,85 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ============================================================
-   FILE PREVIEW PANEL — Slide-in right panel
+   FILE PREVIEW MODAL — Centered overlay
    ============================================================ */
-#file-preview-panel {
+#file-preview-modal {
     position: fixed;
-    top: 0;
-    right: 0;
-    width: 500px;
-    height: 100vh;
-    z-index: 80;
-    background: rgba(8, 8, 20, 0.98);
-    border-left: 1px solid rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(12px);
-    transform: translateX(100%);
-    transition: transform 0.3s cubic-bezier(0.25, 0.9, 0.35, 1);
+    inset: 0;
+    z-index: 90;
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
 }
 
-#file-preview-panel.open { transform: translateX(0); }
+#file-preview-modal.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.preview-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.preview-dialog {
+    position: relative;
+    width: 680px;
+    max-width: 90vw;
+    max-height: 85vh;
+    background: rgba(10, 10, 22, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 40px rgba(240, 200, 80, 0.04);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
 
 .preview-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     flex-shrink: 0;
+}
+
+.preview-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.preview-type-badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.preview-type-badge.badge-md {
+    background: rgba(100, 180, 255, 0.12);
+    color: #80b4f0;
+}
+
+.preview-type-badge.badge-json {
+    background: rgba(240, 200, 80, 0.12);
+    color: #f0c850;
+}
+
+.preview-type-badge.badge-code {
+    background: rgba(160, 152, 128, 0.12);
+    color: #a09880;
 }
 
 .preview-title {
@@ -1069,6 +1121,9 @@
     font-weight: 600;
     color: #e0dcd0;
     letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .preview-close-btn {
@@ -1080,6 +1135,7 @@
     padding: 4px 8px;
     border-radius: 4px;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .preview-close-btn:hover { color: #f0c850; background: rgba(240, 200, 80, 0.1); }
@@ -1091,6 +1147,7 @@
     font-size: 0.82rem;
     color: #a09880;
     line-height: 1.6;
+    min-height: 0;
 }
 
 .preview-content::-webkit-scrollbar { width: 6px; }
@@ -1099,17 +1156,45 @@
     border-radius: 3px;
 }
 
-.preview-actions {
+.preview-footer {
     display: flex;
-    gap: 8px;
-    padding: 12px 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
     flex-shrink: 0;
+}
+
+.preview-meta-inline {
+    font-size: 0.68rem;
+    color: #605848;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 /* ============================================================
    FILE PREVIEW CONTENT STYLES
    ============================================================ */
+
+/* JSON syntax colorization */
+.json-key { color: #f0c850; }
+.json-str { color: #7ec8a0; }
+.json-num { color: #80c8f0; }
+.json-bool { color: #d08060; }
+.json-null { color: #706860; font-style: italic; }
+.json-bracket { color: #a09880; }
+
+/* Markdown links */
+.md-link {
+    color: #80b4f0;
+    text-decoration: none;
+    transition: color 0.15s;
+}
+.md-link:hover { color: #f0c850; text-decoration: underline; }
+
 .preview-meta {
     display: flex;
     justify-content: space-between;
@@ -1293,5 +1378,5 @@ h4.md-h, h5.md-h, h6.md-h { font-size: 0.85rem; }
 
     .detail-overview { grid-template-columns: 1fr; }
 
-    #file-preview-panel { width: 100vw; }
+    .preview-dialog { width: 95vw; max-height: 90vh; }
 }
