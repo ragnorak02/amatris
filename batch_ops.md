@@ -84,7 +84,7 @@ PLAN: Read all claude.md files
       Extract checkbox completion %
       Detect current phase
 APPLY: Update games_index.md with fresh data
-       Regenerate games_overview.html + games_heatmap.html
+       Regenerate amatris dashboard.html + games_heatmap.html
 ```
 
 ---

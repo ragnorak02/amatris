@@ -378,8 +378,8 @@
 <script>
 (function() {
   var allGames = [];
-  var sortCol = 'name';
-  var sortDir = 'asc';
+  var sortCol = 'lastUpdated';
+  var sortDir = 'desc';
   var expandedId = null;
   var activeFilters = { engine: {}, compliance: {} };
   var searchTimer = null;
@@ -685,7 +685,7 @@
       case 'completion': return g.completion || 0;
       case 'status': return g.status || '';
       case 'complianceScore': return d.compliance ? d.compliance.complianceScore : 0;
-      case 'lastUpdated': return d.dates && d.dates.daysSinceUpdate !== null ? d.dates.daysSinceUpdate : 99999;
+      case 'lastUpdated': return d.dates && d.dates.lastCodeUpdate ? d.dates.lastCodeUpdate : '';
       case 'lastEditFile': return d.dates && d.dates.lastCodeFile ? d.dates.lastCodeFile.toLowerCase() : 'zzz';
       case 'controllerSupport':
       case 'firstVisualUpgrade':
@@ -766,7 +766,7 @@
     if (!th) return;
     var col = th.getAttribute('data-sort');
     if (sortCol === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
-    else { sortCol = col; sortDir = 'asc'; }
+    else { sortCol = col; sortDir = (col === 'lastUpdated' || col === 'completion') ? 'desc' : 'asc'; }
     updateSortUI();
     filterAndRender();
   });

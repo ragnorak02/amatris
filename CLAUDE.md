@@ -138,6 +138,7 @@ Amatris MUST NOT:
 - CLAUDE.md is human/AI guidance only.
 - Timestamps are minute precision ISO8601.
 - Git hooks handle timestamp automation.
+- The dashboard HTML file is `amatris dashboard.html` — there is no other dashboard HTML file.
 
 ---
 
