@@ -202,7 +202,6 @@
     background: #0d0b18; padding: 1rem; cursor: default;
     white-space: normal; border-bottom: 2px solid var(--gold);
   }
-  .ex-content { display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 1.2rem; }
   .ex-section h4 {
     color: var(--gold); font-size: 0.76rem; margin-bottom: 0.4rem;
     text-transform: uppercase; letter-spacing: 0.04em;
@@ -255,6 +254,54 @@
     cursor: col-resize; user-select: none; z-index: 12;
   }
   .th-resize-handle:hover, .th-resize-handle.active { background: var(--gold); opacity: 0.6; }
+
+  /* ---- Art thumbnail ---- */
+  .art-thumb {
+    width: 32px; height: 32px; border-radius: 4px; object-fit: cover;
+    border: 1px solid var(--border); display: block;
+  }
+  .art-placeholder {
+    width: 32px; height: 32px; border-radius: 4px; display: flex;
+    align-items: center; justify-content: center; font-size: 0.8rem;
+    font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .art-thumb-cell { position: relative; }
+  .art-thumb-cell img.art-hidden { display: none; }
+
+  /* ---- Featured art panel ---- */
+  .ex-art-panel {
+    width: 200px; min-width: 200px; height: 200px; border-radius: 8px;
+    overflow: hidden; position: relative; border: 1px solid var(--border);
+    background: #0a0a12; flex-shrink: 0;
+  }
+  .ex-art-panel img {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover; opacity: 0; transition: opacity 0.5s;
+  }
+  .ex-art-panel img.art-active { opacity: 1; }
+  .ex-art-panel img.art-hidden { display: none; }
+  .art-placeholder-lg {
+    width: 100%; height: 100%; display: flex; align-items: center;
+    justify-content: center; font-size: 3rem; font-weight: 700; color: #fff;
+  }
+  .ex-art-dots {
+    position: absolute; bottom: 6px; left: 50%;
+    transform: translateX(-50%); display: flex; gap: 4px; z-index: 2;
+  }
+  .ex-art-dots .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.3); transition: background 0.2s;
+  }
+  .ex-art-dots .dot.active { background: var(--gold); }
+  .ex-art-counter {
+    position: absolute; top: 6px; right: 8px; font-size: 0.6rem;
+    color: rgba(255,255,255,0.6); background: rgba(0,0,0,0.5);
+    padding: 1px 5px; border-radius: 3px; z-index: 2;
+  }
+
+  /* ---- Expand row flex layout ---- */
+  .ex-content { display: flex; gap: 1.2rem; }
+  .ex-info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 1.2rem; flex: 1; min-width: 0; }
 
   /* ---- Column group toggles ---- */
   .hide-core .core-col { display: none; }
@@ -331,7 +378,7 @@
   <table>
     <thead>
       <tr>
-        <th colspan="3"></th>
+        <th colspan="4"></th>
         <th class="gc core-col" colspan="5">Core</th>
         <th class="gf feat-col" colspan="5">Features</th>
         <th class="gp comp-col" colspan="5">Compliance</th>
@@ -341,6 +388,7 @@
       <tr id="sortRow">
         <th data-sort="index" style="width:26px">#</th>
         <th style="width:28px"></th>
+        <th style="width:36px"></th>
         <th data-sort="name" class="al" style="width:180px">Game <span class="sa"></span></th>
         <th data-sort="engine" class="core-col" style="width:70px">Engine <span class="sa"></span></th>
         <th data-sort="phase" class="core-col" style="width:65px">Phase <span class="sa"></span></th>
@@ -368,7 +416,7 @@
       </tr>
     </thead>
     <tbody id="tBody">
-      <tr><td colspan="26" class="loading">Loading game data...</td></tr>
+      <tr><td colspan="27" class="loading">Loading game data...</td></tr>
     </tbody>
   </table>
 </div>
@@ -399,7 +447,7 @@
       return data;
     }).catch(function(err) {
       console.error('[Dashboard] Fetch failed:', err);
-      tbody.innerHTML = '<tr><td colspan="26" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="27" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
       return [];
     });
   }
@@ -517,6 +565,105 @@
     return 'pd';
   }
 
+  /* ---- Art helpers ---- */
+  function artPlaceholderColor(name) {
+    var h = 0;
+    for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0x7fffffff;
+    return 'hsl(' + (h % 360) + ',45%,35%)';
+  }
+
+  function artPlaceholderLetter(name) {
+    return (name || '?').charAt(0).toUpperCase();
+  }
+
+  function artThumb(g) {
+    var art = g.art || {};
+    var color = artPlaceholderColor(g.folder || g.name);
+    var letter = artPlaceholderLetter(g.name);
+    var ph = '<span class="art-placeholder" style="background:' + color + '">' + letter + '</span>';
+    if (!art.thumbnail) return '<div class="art-thumb-cell">' + ph + '</div>';
+    return '<div class="art-thumb-cell">' +
+      '<img class="art-thumb" src="/' + esc(art.thumbnail) + '" onerror="this.classList.add(\'art-hidden\');this.nextElementSibling.style.display=\'flex\'">' +
+      '<span class="art-placeholder" style="background:' + color + ';display:none">' + letter + '</span></div>';
+  }
+
+  function buildArtPanel(g) {
+    var art = g.art || {};
+    var gallery = art.gallery || [];
+    var color = artPlaceholderColor(g.folder || g.name);
+    var letter = artPlaceholderLetter(g.name);
+
+    if (gallery.length === 0) {
+      return '<div class="ex-art-panel"><div class="art-placeholder-lg" style="background:' + color + '">' + letter + '</div></div>';
+    }
+
+    var h = '<div class="ex-art-panel" onmouseenter="window._pauseArt()" onmouseleave="window._resumeArt()">';
+    gallery.forEach(function(src, i) {
+      h += '<img src="/' + esc(src) + '" class="art-gallery-img' + (i === 0 ? ' art-active' : '') + '" onerror="this.classList.add(\'art-hidden\');this.classList.remove(\'art-active\')">';
+    });
+    if (gallery.length > 1) {
+      h += '<div class="ex-art-counter"><span class="art-idx">1</span> / ' + gallery.length + '</div>';
+      h += '<div class="ex-art-dots">';
+      gallery.forEach(function(_, i) {
+        h += '<div class="dot' + (i === 0 ? ' active' : '') + '"></div>';
+      });
+      h += '</div>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  /* ---- Art rotation state ---- */
+  var artCycleTimer = null;
+  var artCycleIdx = 0;
+  var artCyclePaused = false;
+
+  function startArtCycle() {
+    stopArtCycle();
+    artCycleIdx = 0;
+    artCyclePaused = false;
+    artCycleTimer = setInterval(function() {
+      if (artCyclePaused) return;
+      var panel = document.querySelector('.ex-art-panel');
+      if (!panel) { stopArtCycle(); return; }
+      var imgs = panel.querySelectorAll('.art-gallery-img');
+      if (imgs.length <= 1) return;
+
+      // Collect visible (non-errored) images
+      var visible = [];
+      for (var i = 0; i < imgs.length; i++) {
+        if (!imgs[i].classList.contains('art-hidden')) visible.push(i);
+      }
+      if (visible.length <= 1) return;
+
+      // Find current active among visible
+      var curVisIdx = -1;
+      for (var j = 0; j < visible.length; j++) {
+        if (imgs[visible[j]].classList.contains('art-active')) { curVisIdx = j; break; }
+      }
+      var nextVisIdx = (curVisIdx + 1) % visible.length;
+
+      // Swap active
+      for (var k = 0; k < imgs.length; k++) imgs[k].classList.remove('art-active');
+      imgs[visible[nextVisIdx]].classList.add('art-active');
+
+      // Update dots + counter
+      var dots = panel.querySelectorAll('.dot');
+      for (var d = 0; d < dots.length; d++) dots[d].classList.remove('active');
+      if (dots[visible[nextVisIdx]]) dots[visible[nextVisIdx]].classList.add('active');
+      var counter = panel.querySelector('.art-idx');
+      if (counter) counter.textContent = visible[nextVisIdx] + 1;
+    }, 4000);
+  }
+
+  function stopArtCycle() {
+    if (artCycleTimer) { clearInterval(artCycleTimer); artCycleTimer = null; }
+    artCycleIdx = 0;
+  }
+
+  window._pauseArt = function() { artCyclePaused = true; };
+  window._resumeArt = function() { artCyclePaused = false; };
+
   function nextStep(g) {
     if (g.status === 'placeholder') return 'Manual launch';
     var p = (g.phase || '').toLowerCase();
@@ -532,7 +679,7 @@
   function renderTable(games) {
     gcEl.textContent = games.length + ' game' + (games.length !== 1 ? 's' : '');
     if (!games.length) {
-      tbody.innerHTML = '<tr><td colspan="26" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="27" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
       return;
     }
     var h = '';
@@ -548,6 +695,7 @@
       /* Always visible */
       h += '<td class="ci">' + (i + 1) + '</td>';
       h += '<td><button class="play-btn" data-game="' + g.id + '" data-name="' + esc(g.name) + '" title="Launch ' + esc(g.name) + '">\u25B6</button></td>';
+      h += '<td>' + artThumb(g) + '</td>';
       h += '<td class="al cn">' + esc(g.name);
       if (c.missingFiles && c.missingFiles.length > 0 && (c.complianceScore || 0) < 5) {
         h += '<span class="mpill" title="Missing: ' + esc(c.missingFiles.join(', ')) + '">' + c.missingFiles.length + ' gaps</span>';
@@ -596,7 +744,13 @@
     var tech = g.tech || {};
     var ts = g.testingStatus || {};
 
-    var h = '<tr class="expand-row"><td colspan="26"><div class="ex-content">';
+    var h = '<tr class="expand-row"><td colspan="27"><div class="ex-content">';
+
+    /* Art panel */
+    h += buildArtPanel(g);
+
+    /* Info grid */
+    h += '<div class="ex-info-grid">';
 
     /* Left: compliance grid */
     h += '<div class="ex-section"><h4>File Compliance (' + (c.complianceScore || 0) + '/8)</h4><div class="ex-grid">';
@@ -660,6 +814,7 @@
     }
     h += '</div>';
 
+    h += '</div>'; /* end ex-info-grid */
     h += '</div>'; /* end ex-content */
 
     /* Actions */
@@ -737,10 +892,12 @@
 
   /* ---- Central render ---- */
   function filterAndRender() {
+    stopArtCycle();
     var filtered = doFilter(allGames);
     var sorted = doSort(filtered);
     renderSummary(allGames);
     renderTable(sorted);
+    if (expandedId) startArtCycle();
   }
 
   /* ---- Row click → expand/collapse (skip play buttons) ---- */
@@ -865,7 +1022,7 @@
 
   /* ---- Refresh ---- */
   document.getElementById('refreshBtn').addEventListener('click', function() {
-    tbody.innerHTML = '<tr><td colspan="26" class="loading">Refreshing...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="27" class="loading">Refreshing...</td></tr>';
     loadData().then(function(games) { allGames = games; filterAndRender(); });
   });
 
