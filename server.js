@@ -4,7 +4,7 @@
    games, system stats, game management, and Studio OS APIs.
 
    Usage:  node server.js
-   Then open:  http://localhost:3000
+   Then open:  http://localhost:3001
    ============================================================ */
 
 const http = require('http');
@@ -13,7 +13,7 @@ const path = require('path');
 const os = require('os');
 const { exec, execFile, execSync } = require('child_process');
 
-const PORT = 3000;
+const PORT = 3001;
 const IS_PKG = typeof process.pkg !== 'undefined';
 const BASE_DIR = IS_PKG ? path.dirname(process.execPath) : __dirname;
 const LAUNCHER_DIR = BASE_DIR;
@@ -58,6 +58,107 @@ function discoverGameFolders() {
         console.error('[WARN] Could not scan for game folders:', e.message);
     }
     return folders;
+}
+
+/* ---- Discover art assets for a game folder ---- */
+const ART_EXTS = new Set(['.png', '.jpg', '.jpeg', '.svg', '.gif', '.webp']);
+
+function discoverGameArt(folderPath, folderName, config) {
+    try {
+        var thumbnail = null;
+        var gallery = [];
+
+        // Thumbnail priority
+        // 1. game.config.json → thumbnail field
+        if (config && config.thumbnail) {
+            var cfgThumb = path.join(folderPath, config.thumbnail);
+            if (fs.existsSync(cfgThumb)) thumbnail = folderName + '/' + config.thumbnail;
+        }
+        // 2. assets/sprites/ui/icon.png
+        if (!thumbnail && fs.existsSync(path.join(folderPath, 'assets', 'sprites', 'ui', 'icon.png'))) {
+            thumbnail = folderName + '/assets/sprites/ui/icon.png';
+        }
+        // 3. icon.png (game root)
+        if (!thumbnail && fs.existsSync(path.join(folderPath, 'icon.png'))) {
+            thumbnail = folderName + '/icon.png';
+        }
+        // 4. icon.svg (game root)
+        if (!thumbnail && fs.existsSync(path.join(folderPath, 'icon.svg'))) {
+            thumbnail = folderName + '/icon.svg';
+        }
+        // 5. {projectSubdir}/icon.svg (drift pattern)
+        if (!thumbnail && config && config.launch && config.launch.projectSubdir) {
+            var subIcon = path.join(folderPath, config.launch.projectSubdir, 'icon.svg');
+            if (fs.existsSync(subIcon)) {
+                thumbnail = folderName + '/' + config.launch.projectSubdir + '/icon.svg';
+            }
+        }
+
+        // Collect gallery images (refImages/, root PNGs, aiReferenceMaterial/)
+        var seen = new Set();
+        function addImage(relPath) {
+            if (gallery.length >= 8) return;
+            if (seen.has(relPath)) return;
+            seen.add(relPath);
+            gallery.push(relPath);
+        }
+
+        // refImages/
+        var refDir = path.join(folderPath, 'refImages');
+        try {
+            var refEntries = fs.readdirSync(refDir);
+            refEntries.forEach(function(f) {
+                var ext = path.extname(f).toLowerCase();
+                if (ART_EXTS.has(ext) && !f.endsWith('.import')) {
+                    addImage(folderName + '/refImages/' + f);
+                }
+            });
+        } catch (e) { /* no refImages */ }
+
+        // Root-level PNGs/images
+        try {
+            var rootEntries = fs.readdirSync(folderPath);
+            rootEntries.forEach(function(f) {
+                var ext = path.extname(f).toLowerCase();
+                if (ART_EXTS.has(ext) && !f.endsWith('.import') && f !== 'icon.png' && f !== 'icon.svg') {
+                    addImage(folderName + '/' + f);
+                }
+            });
+        } catch (e) { /* skip */ }
+
+        // aiReferenceMaterial/
+        var aiDir = path.join(folderPath, 'aiReferenceMaterial');
+        try {
+            var aiEntries = fs.readdirSync(aiDir);
+            aiEntries.forEach(function(f) {
+                var ext = path.extname(f).toLowerCase();
+                if (ART_EXTS.has(ext) && !f.endsWith('.import')) {
+                    addImage(folderName + '/aiReferenceMaterial/' + f);
+                }
+            });
+        } catch (e) { /* no aiReferenceMaterial */ }
+
+        // 6. First refImage as thumbnail fallback
+        if (!thumbnail && gallery.length > 0) {
+            thumbnail = gallery[0];
+        }
+        // 7. First root-level PNG as thumbnail fallback
+        if (!thumbnail) {
+            try {
+                var rootFiles = fs.readdirSync(folderPath);
+                for (var i = 0; i < rootFiles.length; i++) {
+                    if (rootFiles[i].toLowerCase().endsWith('.png')) {
+                        thumbnail = folderName + '/' + rootFiles[i];
+                        break;
+                    }
+                }
+            } catch (e) { /* skip */ }
+        }
+
+        return { thumbnail: thumbnail, gallery: gallery };
+    } catch (e) {
+        return { thumbnail: null, gallery: [] };
+    }
 }
 
 const GAME_FOLDERS = discoverGameFolders();
@@ -108,7 +209,8 @@ const MIME = {
     '.mjs': 'application/javascript',
     '.tres': 'text/plain',
     '.tscn': 'text/plain',
-    '.gdshader': 'text/plain'
+    '.gdshader': 'text/plain',
+    '.webp': 'image/webp'
 };
 
 /* ---- CPU usage tracking (two-sample delta) ---- */
@@ -401,10 +503,14 @@ function getGames(res) {
             validation: validation
         };
 
+        // ---- Discover art assets ----
+        var art = discoverGameArt(folderPath, folderName, config);
+
         results.push({
             id: gameId,
             name: config.title || config.name || folderName,
             folder: folderName,
+            art: art,
             engine: engine,
             engineType: engineType,
             genre: config.genre || 'Unknown',

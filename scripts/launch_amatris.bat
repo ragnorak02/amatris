@@ -7,10 +7,10 @@ REM ============================================
 cd /d "Z:\Development\amatris"
 
 REM Check if server is already running on port 3000
-netstat -ano | findstr ":3000 " | findstr "LISTENING" >nul 2>&1
+netstat -ano | findstr ":3001 " | findstr "LISTENING" >nul 2>&1
 if %errorlevel% equ 0 (
     echo  Amatris is already running. Opening browser...
-    start "" "http://localhost:3000"
+    start "" "http://localhost:3001"
     exit /b 0
 )
 
@@ -33,12 +33,12 @@ if %TRIES% geq 20 (
     exit /b 1
 )
 timeout /t 1 /nobreak >nul 2>&1
-netstat -ano | findstr ":3000 " | findstr "LISTENING" >nul 2>&1
+netstat -ano | findstr ":3001 " | findstr "LISTENING" >nul 2>&1
 if %errorlevel% equ 0 goto :ready
 set /a TRIES+=1
 goto :waitloop
 
 :ready
-echo  Server is ready at http://localhost:3000
-start "" "http://localhost:3000"
+echo  Server is ready at http://localhost:3001
+start "" "http://localhost:3001"
 echo  Opening browser...
