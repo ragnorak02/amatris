@@ -1,6 +1,6 @@
 # Git & GitHub Operations Guide
 
-> Standardized Git/GitHub workflow for the Amatris game portfolio.
+> Standardized Git/GitHub workflow for the Lumina game portfolio.
 > Covers repo expectations, commit standards, and **critical secret safety**.
 
 ---

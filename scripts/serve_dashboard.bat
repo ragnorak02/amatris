@@ -1,6 +1,6 @@
 @echo off
 REM ============================================
-REM  Amatris — Portfolio Dashboard Server
+REM  Lumina — Portfolio Dashboard Server
 REM  Serves from /Games root on port 8000
 REM ============================================
 
@@ -8,7 +8,7 @@ cd /d "%~dp0.."
 
 echo.
 echo  ========================================
-echo   Amatris - Portfolio Dashboard
+echo   Lumina - Portfolio Dashboard
 echo  ========================================
 echo.
 
@@ -32,12 +32,12 @@ if %errorlevel% neq 0 (
 )
 
 echo  Starting server at http://localhost:8000
-echo  Portal:    http://localhost:8000/amatris%%20dashboard.html
+echo  Portal:    http://localhost:8000/lumina%%20dashboard.html
 echo  Overview:  http://localhost:8000/games_overview.html
 echo  Heatmap:   http://localhost:8000/games_heatmap.html
 echo.
 echo  Press Ctrl+C to stop the server.
 echo.
 
-start "" "http://localhost:8000/amatris%%20dashboard.html"
+start "" "http://localhost:8000/lumina%%20dashboard.html"
 %PYTHON% -m http.server 8000

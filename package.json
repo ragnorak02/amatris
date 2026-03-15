@@ -1,11 +1,19 @@
 {
-  "name": "amatris-studio-os",
+  "name": "lumina-studio-os",
   "version": "1.0.0",
-  "description": "Amatris Studio OS Launcher",
-  "main": "server.js",
+  "description": "Lumina Studio OS — Game Development Dashboard",
+  "main": "electron-main.js",
   "bin": "server.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server.js",
+    "dev": "node server.js"
+  },
   "pkg": {
     "targets": ["node20-win-x64"],
     "outputPath": "."
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
   }
 }

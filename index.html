@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMATRIS</title>
-    <link rel="icon" href="amatris-fire.ico" type="image/x-icon">
+    <title>LUMINA</title>
+    <link rel="icon" href="lumina-crystal.ico" type="image/x-icon">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/studio.css">
     <link rel="stylesheet" href="css/overlay.css">
@@ -13,57 +13,97 @@
     <!-- Starry night background layers -->
     <div id="bg-stars" class="bg-layer"></div>
     <div id="bg-clouds" class="bg-layer"></div>
-    <div id="logo-icon" title="AMATRIS">
-        <svg id="wolf-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <!-- Wolf head silhouette -->
-            <path d="M50 8 L35 28 L20 18 L28 42 L18 52 L32 54 L30 70 L42 62 L50 75 L58 62 L70 70 L68 54 L82 52 L72 42 L80 18 L65 28 L50 8Z" fill="#d4af37" opacity="0.95"/>
-            <!-- Flame mane left -->
-            <path class="flame-path" d="M25 30 Q20 20 28 15 Q24 25 30 28Z" fill="#f0c850" opacity="0.8" style="animation-delay: 0s"/>
-            <path class="flame-path" d="M22 38 Q15 28 20 20 Q18 32 26 36Z" fill="#f0c850" opacity="0.7" style="animation-delay: 0.3s"/>
-            <!-- Flame mane right -->
-            <path class="flame-path" d="M75 30 Q80 20 72 15 Q76 25 70 28Z" fill="#f0c850" opacity="0.8" style="animation-delay: 0.6s"/>
-            <path class="flame-path" d="M78 38 Q85 28 80 20 Q82 32 74 36Z" fill="#f0c850" opacity="0.7" style="animation-delay: 0.9s"/>
-            <!-- Flame top -->
-            <path class="flame-path" d="M50 8 Q45 -2 50 -5 Q55 -2 50 8Z" fill="#f0c850" opacity="0.75" style="animation-delay: 0.15s"/>
-            <path class="flame-path" d="M42 14 Q38 4 44 0 Q40 10 45 14Z" fill="#f0c850" opacity="0.6" style="animation-delay: 0.45s"/>
-            <path class="flame-path" d="M58 14 Q62 4 56 0 Q60 10 55 14Z" fill="#f0c850" opacity="0.6" style="animation-delay: 0.75s"/>
-            <!-- Eyes -->
-            <circle cx="40" cy="42" r="3" fill="#ff6030" opacity="0.95"/>
-            <circle cx="60" cy="42" r="3" fill="#ff6030" opacity="0.95"/>
-            <circle cx="40" cy="41.5" r="1.2" fill="#fff" opacity="0.9"/>
-            <circle cx="60" cy="41.5" r="1.2" fill="#fff" opacity="0.9"/>
-            <!-- Snout -->
-            <path d="M45 52 L50 58 L55 52" fill="none" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-    </div>
-
-    <!-- Header -->
-    <header id="portal-header">
-        <h1 class="logo">AMATRIS</h1>
+    <!-- ============================================================
+         APP SHELL — Persistent sticky header across all modes
+         ============================================================ -->
+    <header id="app-shell">
+        <div id="shell-left">
+            <div id="shell-crystal" title="LUMINA">
+                <svg id="wolf-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 8 L35 28 L20 18 L28 42 L18 52 L32 54 L30 70 L42 62 L50 75 L58 62 L70 70 L68 54 L82 52 L72 42 L80 18 L65 28 L50 8Z" fill="#d4af37" opacity="0.95"/>
+                    <path class="flame-path" d="M25 30 Q20 20 28 15 Q24 25 30 28Z" fill="#f0c850" opacity="0.8" style="animation-delay: 0s"/>
+                    <path class="flame-path" d="M22 38 Q15 28 20 20 Q18 32 26 36Z" fill="#f0c850" opacity="0.7" style="animation-delay: 0.3s"/>
+                    <path class="flame-path" d="M75 30 Q80 20 72 15 Q76 25 70 28Z" fill="#f0c850" opacity="0.8" style="animation-delay: 0.6s"/>
+                    <path class="flame-path" d="M78 38 Q85 28 80 20 Q82 32 74 36Z" fill="#f0c850" opacity="0.7" style="animation-delay: 0.9s"/>
+                    <path class="flame-path" d="M50 8 Q45 -2 50 -5 Q55 -2 50 8Z" fill="#f0c850" opacity="0.75" style="animation-delay: 0.15s"/>
+                    <path class="flame-path" d="M42 14 Q38 4 44 0 Q40 10 45 14Z" fill="#f0c850" opacity="0.6" style="animation-delay: 0.45s"/>
+                    <path class="flame-path" d="M58 14 Q62 4 56 0 Q60 10 55 14Z" fill="#f0c850" opacity="0.6" style="animation-delay: 0.75s"/>
+                    <circle cx="40" cy="42" r="3" fill="#ff6030" opacity="0.95"/>
+                    <circle cx="60" cy="42" r="3" fill="#ff6030" opacity="0.95"/>
+                    <circle cx="40" cy="41.5" r="1.2" fill="#fff" opacity="0.9"/>
+                    <circle cx="60" cy="41.5" r="1.2" fill="#fff" opacity="0.9"/>
+                    <path d="M45 52 L50 58 L55 52" fill="none" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h1 id="shell-title">LUMINA</h1>
+            <nav id="mode-tabs">
+                <button class="mode-tab active" data-mode="lumina">Lumina</button>
+                <button class="mode-tab" data-mode="claude">Claude</button>
+                <button class="mode-tab" data-mode="hunyuan">Hunyuan</button>
+                <button class="mode-tab" data-mode="audio">Audio</button>
+            </nav>
+        </div>
+        <div id="shell-center">
+            <div id="pin-tray"><!-- Rendered by studio.js --></div>
+        </div>
+        <div id="shell-right">
+            <button class="shell-launcher" id="launch-claude-lumina" title="Launch Claude (Lumina)">
+                <svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 1v14M1 8h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <span>Claude</span>
+            </button>
+            <button class="shell-launcher" id="launch-claude-hunyuan" title="Launch Claude (ComfyUI / Hunyuan)">
+                <svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 14L8 2l6 12H2z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
+                <span>Hunyuan</span>
+            </button>
+        </div>
     </header>
 
-    <!-- Top Mini Menu Bar -->
-    <nav id="top-menu">
-        <ul id="menu-tabs">
-            <li class="menu-tab" data-tab="store">Store</li>
-            <li class="menu-tab active" data-tab="library">Library</li>
-            <li class="menu-tab" data-tab="news">News</li>
-            <li class="menu-tab" data-tab="mods">Mods</li>
-            <li class="menu-tab" data-tab="wip">WIP</li>
-            <li class="menu-tab" data-tab="patreon">Patreon</li>
-            <li class="menu-tab" data-tab="credits">Credits</li>
-        </ul>
-    </nav>
+    <!-- ============================================================
+         MODE: LUMINA — Project Dashboard
+         ============================================================ -->
+    <div id="mode-lumina" class="mode-content active">
+        <div id="studio-view">
+            <aside id="studio-sidebar">
+                <div id="sidebar-header"><span class="sidebar-title">LIBRARY</span></div>
+                <div id="sidebar-filters"><!-- Rendered by studio.js --></div>
+            </aside>
+            <div id="studio-main">
+                <div id="studio-toolbar"></div>
+                <div id="studio-game-list"></div>
+            </div>
+        </div>
+    </div>
 
-    <!-- Studio Dashboard -->
-    <div id="studio-view">
-        <aside id="studio-sidebar">
-            <div id="sidebar-header"><span class="sidebar-title">LIBRARY</span></div>
-            <div id="sidebar-filters"><!-- Rendered by studio.js --></div>
-        </aside>
-        <div id="studio-main">
-            <div id="studio-toolbar"></div>
-            <div id="studio-game-list"></div>
+    <!-- ============================================================
+         MODE: CLAUDE — ClaudeCount Embed (Mock)
+         ============================================================ -->
+    <div id="mode-claude" class="mode-content">
+        <div class="mode-empty-state">
+            <div class="mode-empty-icon">&#9670;</div>
+            <h2>Claude Sessions</h2>
+            <p>Lumina-scoped ClaudeCount view — coming soon</p>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MODE: HUNYUAN — 3D Asset Browser (Mock)
+         ============================================================ -->
+    <div id="mode-hunyuan" class="mode-content">
+        <div class="mode-empty-state">
+            <div class="mode-empty-icon">&#9651;</div>
+            <h2>3D Asset Browser</h2>
+            <p>Hunyuan / ComfyUI asset browser — coming soon</p>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MODE: AUDIO — Audio Asset Browser (Mock)
+         ============================================================ -->
+    <div id="mode-audio" class="mode-content">
+        <div class="mode-empty-state">
+            <div class="mode-empty-icon">&#9835;</div>
+            <h2>Audio Browser</h2>
+            <p>Studio audio asset browser — coming soon</p>
         </div>
     </div>
 
@@ -145,7 +185,7 @@
                 <span class="instruction-text">Hit <span class="btn-badge btn-b">B</span> to return to Game</span>
             </div>
             <div class="instruction-row">
-                <span class="instruction-text">Hold <span class="btn-badge btn-y">Y</span> to exit game and return to AMATRIS</span>
+                <span class="instruction-text">Hold <span class="btn-badge btn-y">Y</span> to exit game and return to LUMINA</span>
             </div>
         </div>
 
@@ -189,6 +229,9 @@
     <script src="js/game-view.js"></script>
     <script src="js/overlay.js"></script>
     <script src="js/studio.js"></script>
+    <script src="js/claude-tab.js"></script>
+    <script src="js/hunyuan-tab.js"></script>
+    <script src="js/audio-tab.js"></script>
     <script src="js/file-preview.js"></script>
     <script src="js/test-runner.js"></script>
     <script src="js/background.js"></script>

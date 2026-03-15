@@ -1,5 +1,5 @@
 /* ============================================================
-   server.js — AMATRIS Studio OS server
+   server.js — LUMINA Studio OS server
    Serves the portal UI and provides endpoints for launching
    games, system stats, game management, and Studio OS APIs.
 
@@ -12,6 +12,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { exec, execFile, execSync } = require('child_process');
+const assetSync = require('./scripts/asset_sync.js');
+const assetScanner = require('./scanners/asset_scanner.js');
 
 const PORT = 3001;
 const IS_PKG = typeof process.pkg !== 'undefined';
@@ -29,7 +31,8 @@ const SCREENSHOTS_DIR = path.join(GAMES_DIR, 'screenshots');
    .git, screenshots) are excluded. */
 const NON_GAME_DIRS = new Set([
     '.claude', '.git', 'css', 'js', 'refImages', 'scripts',
-    'node_modules', 'screenshots', 'docs'
+    'node_modules', 'screenshots', 'docs', 'shared_assets', 'game assets',
+    'indexes', 'scanners', 'assets'
 ]);
 
 function discoverGameFolders() {
@@ -210,7 +213,9 @@ const MIME = {
     '.tres': 'text/plain',
     '.tscn': 'text/plain',
     '.gdshader': 'text/plain',
-    '.webp': 'image/webp'
+    '.webp': 'image/webp',
+    '.glb': 'model/gltf-binary',
+    '.gltf': 'model/gltf+json'
 };
 
 /* ---- CPU usage tracking (two-sample delta) ---- */
@@ -546,6 +551,8 @@ function getGames(res) {
                 type: launchType,
                 projectDir: folderName
             },
+            // Shared asset packages subscription
+            sharedAssetPackages: (config.sharedAssets && config.sharedAssets.packages) || [],
             // Fields from project_status.json
             features: projectStatus ? projectStatus.features : null,
             milestones: projectStatus ? projectStatus.milestones : null,
@@ -782,6 +789,16 @@ function getRunning(res) {
     jsonResponse(res, 200, running);
 }
 
+/* ---- Bring a launched process window to the foreground ---- */
+const FOCUS_SCRIPT = path.join(LAUNCHER_DIR, 'scripts', 'focus-window.ps1');
+
+function focusProcessWindow(pid) {
+    exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${FOCUS_SCRIPT}" ${pid}`,
+        { timeout: 12000 }, (err) => {
+            if (err) console.error('[FOCUS] Could not focus window:', err.message);
+        });
+}
+
 /* ============================================================
    LAUNCH — Dynamic config lookup from game.config.json
    ============================================================ */
@@ -844,6 +861,9 @@ function launchGame(gameId, res) {
         });
         runningGames[gameId] = child;
         child.unref();
+
+        // Bring the Godot window to foreground once it appears
+        focusProcessWindow(child.pid);
 
         jsonResponse(res, 200, { status: 'launched', game: gameId, type: 'godot' });
         return;
@@ -947,6 +967,212 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // POST /api/claude/:target — Launch Claude Code in a new terminal
+    const claudeMatch = pathname.match(/^\/api\/claude\/([a-z0-9_-]+)$/i);
+    if (claudeMatch && method === 'POST') {
+        const target = claudeMatch[1].toLowerCase();
+
+        // Special launcher targets (not game folders)
+        const SPECIAL_TARGETS = {
+            lumina: BASE_DIR,
+            hunyuan: String.raw`Z:\ComfyUI-Hunyuan`
+        };
+
+        let folderPath;
+        if (SPECIAL_TARGETS[target]) {
+            folderPath = SPECIAL_TARGETS[target];
+        } else {
+            const folderName = GAME_FOLDERS[target];
+            if (!folderName) {
+                jsonResponse(res, 404, { error: `Unknown target: ${target}` });
+                return;
+            }
+            folderPath = path.join(GAMES_DIR, folderName);
+        }
+
+        const cmd = `start cmd /k "cd /d ${folderPath} && claude --dangerously-skip-permissions"`;
+        console.log(`[CLAUDE] Launching Claude Code for ${target}: ${cmd}`);
+        exec(cmd, { cwd: folderPath }, (err) => {
+            if (err) console.error(`[CLAUDE] Error launching for ${target}:`, err.message);
+        });
+        jsonResponse(res, 200, { status: 'launched', target: target });
+        return;
+    }
+
+    // POST /api/open-terminal/:gameId — Open terminal in game folder
+    const termMatch = pathname.match(/^\/api\/open-terminal\/([^/]+)$/i);
+    if (termMatch && method === 'POST') {
+        const folderName = decodeURIComponent(termMatch[1]);
+        const folderPath = path.join(GAMES_DIR, folderName);
+        const cmd = `start cmd /k "cd /d ${folderPath}"`;
+        exec(cmd, (err) => { if (err) console.error('[TERMINAL]', err.message); });
+        jsonResponse(res, 200, { status: 'opened', folder: folderName });
+        return;
+    }
+
+    // POST /api/open-vscode/:gameId — Open VS Code in game folder
+    const codeMatch = pathname.match(/^\/api\/open-vscode\/([^/]+)$/i);
+    if (codeMatch && method === 'POST') {
+        const folderName = decodeURIComponent(codeMatch[1]);
+        const folderPath = path.join(GAMES_DIR, folderName);
+        exec(`code "${folderPath}"`, (err) => { if (err) console.error('[VSCODE]', err.message); });
+        jsonResponse(res, 200, { status: 'opened', folder: folderName });
+        return;
+    }
+
+    // POST /api/open-folder/:gameId — Open folder in Explorer
+    const folderMatch = pathname.match(/^\/api\/open-folder\/([^/]+)$/i);
+    if (folderMatch && method === 'POST') {
+        const folderName = decodeURIComponent(folderMatch[1]);
+        const folderPath = path.join(GAMES_DIR, folderName);
+        exec(`explorer "${folderPath}"`, (err) => { if (err) console.error('[FOLDER]', err.message); });
+        jsonResponse(res, 200, { status: 'opened', folder: folderName });
+        return;
+    }
+
+    // ---- 3D Asset Index APIs ----
+
+    // GET /api/assets/3d — return 3D asset index
+    if (pathname === '/api/assets/3d' && method === 'GET') {
+        try {
+            const data = fs.readFileSync(assetScanner.INDEX_PATH, 'utf8');
+            const index = JSON.parse(data);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(index));
+        } catch (e) {
+            jsonResponse(res, 200, { version: 1, assetCount: 0, assets: [] });
+        }
+        return;
+    }
+
+    // POST /api/assets/rebuild-3d-index — rescan and rebuild
+    if (pathname === '/api/assets/rebuild-3d-index' && method === 'POST') {
+        try {
+            const index = assetScanner.scan();
+            jsonResponse(res, 200, { status: 'rebuilt', assetCount: index.assetCount });
+        } catch (e) {
+            jsonResponse(res, 500, { error: e.message });
+        }
+        return;
+    }
+
+    // ---- Asset Pipeline APIs ----
+
+    // GET /api/assets — return catalog
+    if (pathname === '/api/assets' && method === 'GET') {
+        const catalog = assetSync.readJson(assetSync.CATALOG_PATH);
+        if (!catalog) {
+            jsonResponse(res, 200, { generated: null, assetCount: 0, assets: [] });
+        } else {
+            jsonResponse(res, 200, catalog);
+        }
+        return;
+    }
+
+    // GET /api/assets/sync-status — per-game sync overview
+    if (pathname === '/api/assets/sync-status' && method === 'GET') {
+        const games = assetSync.discoverGames();
+        const catalog = assetSync.readJson(assetSync.CATALOG_PATH) || { assets: [] };
+        const statuses = games.filter(g => g.sharedAssets && g.sharedAssets.enabled).map(g => {
+            const syncState = assetSync.loadSyncState(g.dirPath);
+            const eligible = assetSync.matchAssets(catalog, g.sharedAssets.pools[0] || {}, g.sharedAssets.exclude || []);
+            return {
+                id: g.id,
+                folder: g.folder,
+                eligible: eligible.length,
+                synced: Object.keys(syncState.syncedAssets).length,
+                lastSync: syncState.lastSync
+            };
+        });
+        jsonResponse(res, 200, { games: statuses });
+        return;
+    }
+
+    // POST /api/assets/sync/:gameId — trigger sync for a game
+    const syncMatch = pathname.match(/^\/api\/assets\/sync\/([a-z0-9_-]+)$/i);
+    if (syncMatch && method === 'POST') {
+        const gameId = syncMatch[1].toLowerCase();
+        const execute = url.searchParams.get('execute') === 'true';
+        const games = assetSync.discoverGames();
+        const game = games.find(g => g.id === gameId);
+        if (!game) {
+            jsonResponse(res, 404, { error: `Game not found: ${gameId}` });
+            return;
+        }
+        let catalog = assetSync.readJson(assetSync.CATALOG_PATH);
+        if (!catalog) catalog = assetSync.rebuildCatalog();
+        const result = assetSync.syncGame(game, catalog, { execute, force: false, filterAssetId: null });
+        jsonResponse(res, 200, result);
+        return;
+    }
+
+    // POST /api/assets/rebuild-catalog — rebuild catalog.json
+    if (pathname === '/api/assets/rebuild-catalog' && method === 'POST') {
+        const catalog = assetSync.rebuildCatalog();
+        jsonResponse(res, 200, { status: 'rebuilt', assetCount: catalog.assetCount });
+        return;
+    }
+
+    // GET /api/assets/packages — return all packages with enriched data
+    if (pathname === '/api/assets/packages' && method === 'GET') {
+        const pkgData = assetSync.loadPackages();
+        const catalog = assetSync.readJson(assetSync.CATALOG_PATH) || { assets: [] };
+        const catalogIds = new Set(catalog.assets.map(a => a.id));
+        const enriched = pkgData.packages.map(pkg => {
+            const missing = (pkg.assets || []).filter(aid => !catalogIds.has(aid));
+            return {
+                id: pkg.id,
+                name: pkg.name,
+                description: pkg.description || '',
+                dimension: pkg.dimension || '',
+                category: pkg.category || '',
+                theme: pkg.theme || '',
+                assetCount: (pkg.assets || []).length,
+                missingAssets: missing,
+                created: pkg.created || null,
+                updated: pkg.updated || null
+            };
+        });
+        jsonResponse(res, 200, { packages: enriched });
+        return;
+    }
+
+    // POST /api/games/:gameId/packages — update a game's subscribed packages
+    const pkgMatch = pathname.match(/^\/api\/games\/([a-z0-9_-]+)\/packages$/i);
+    if (pkgMatch && method === 'POST') {
+        const gameId = pkgMatch[1].toLowerCase();
+        const folderName = GAME_FOLDERS[gameId];
+        if (!folderName) {
+            jsonResponse(res, 404, { error: `Unknown game: ${gameId}` });
+            return;
+        }
+        readBody(req, (body) => {
+            let payload;
+            try {
+                payload = JSON.parse(body);
+            } catch (e) {
+                jsonResponse(res, 400, { error: 'Invalid JSON' });
+                return;
+            }
+            if (!Array.isArray(payload.packages)) {
+                jsonResponse(res, 400, { error: 'packages must be an array' });
+                return;
+            }
+            const configPath = path.join(GAMES_DIR, folderName, 'game.config.json');
+            let config = {};
+            try {
+                config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            } catch (e) { /* no config yet */ }
+            if (!config.sharedAssets) {
+                config.sharedAssets = { enabled: true };
+            }
+            config.sharedAssets.packages = payload.packages;
+            fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf8');
+            jsonResponse(res, 200, { status: 'updated', game: gameId, packages: payload.packages });
+        });
+        return;
+    }
+
     // ---- Legacy APIs ----
 
     // API: launch game
@@ -977,6 +1203,129 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // ---- File Browser APIs ----
+
+    // GET /api/browse?dir=relative/path — list directory contents
+    if (pathname === '/api/browse' && method === 'GET') {
+        const dir = url.searchParams.get('dir') || '';
+        const absDir = path.resolve(BASE_DIR, dir);
+
+        // Security: must be within BASE_DIR
+        if (!absDir.startsWith(path.resolve(BASE_DIR))) {
+            jsonResponse(res, 403, { error: 'Access denied' });
+            return;
+        }
+
+        const SKIP_DIRS = new Set(['.git', 'node_modules', '.godot', '.import']);
+        try {
+            const entries = fs.readdirSync(absDir, { withFileTypes: true });
+            const result = entries
+                .filter(e => {
+                    if (e.name.startsWith('.') && e.isDirectory() && SKIP_DIRS.has(e.name)) return false;
+                    return true;
+                })
+                .map(e => {
+                    const entryPath = dir ? dir + '/' + e.name : e.name;
+                    const full = path.join(absDir, e.name);
+                    let size = null;
+                    let mtime = null;
+                    if (e.isFile()) {
+                        try {
+                            const st = fs.statSync(full);
+                            size = st.size;
+                            mtime = st.mtime.toISOString();
+                        } catch (_) {}
+                    }
+                    return {
+                        name: e.name,
+                        type: e.isDirectory() ? 'dir' : 'file',
+                        path: entryPath.replace(/\\/g, '/'),
+                        size: size,
+                        mtime: mtime,
+                        ext: e.isFile() ? path.extname(e.name).toLowerCase() : null
+                    };
+                })
+                .sort((a, b) => {
+                    if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+                    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+                });
+
+            jsonResponse(res, 200, { dir: dir, entries: result });
+        } catch (e) {
+            jsonResponse(res, 404, { error: 'Directory not found: ' + dir });
+        }
+        return;
+    }
+
+    // POST /api/assets/approve — copy staging asset to shared_assets
+    if (pathname === '/api/assets/approve' && method === 'POST') {
+        readBody(req, (body) => {
+            let payload;
+            try { payload = JSON.parse(body); } catch (e) {
+                jsonResponse(res, 400, { error: 'Invalid JSON' });
+                return;
+            }
+            const { sourcePath, targetDir } = payload;
+            if (!sourcePath) {
+                jsonResponse(res, 400, { error: 'sourcePath required' });
+                return;
+            }
+            const srcAbs = path.resolve(BASE_DIR, sourcePath);
+            const dstDirAbs = path.resolve(BASE_DIR, targetDir || 'shared_assets/3d');
+
+            if (!srcAbs.startsWith(path.resolve(BASE_DIR)) || !dstDirAbs.startsWith(path.resolve(BASE_DIR))) {
+                jsonResponse(res, 403, { error: 'Access denied' });
+                return;
+            }
+            if (!fs.existsSync(srcAbs)) {
+                jsonResponse(res, 404, { error: 'Source file not found' });
+                return;
+            }
+
+            fs.mkdirSync(dstDirAbs, { recursive: true });
+            const dstPath = path.join(dstDirAbs, path.basename(sourcePath));
+            fs.copyFileSync(srcAbs, dstPath);
+
+            // Also copy preview image if exists (.glb.png pattern)
+            const previewSrc = srcAbs + '.png';
+            if (fs.existsSync(previewSrc)) {
+                fs.copyFileSync(previewSrc, dstPath + '.png');
+            }
+
+            jsonResponse(res, 200, {
+                status: 'approved',
+                source: sourcePath,
+                destination: path.relative(BASE_DIR, dstPath).replace(/\\/g, '/')
+            });
+        });
+        return;
+    }
+
+    // POST /api/open-path — open any path in Explorer
+    if (pathname === '/api/open-path' && method === 'POST') {
+        readBody(req, (body) => {
+            let payload;
+            try { payload = JSON.parse(body); } catch (e) {
+                jsonResponse(res, 400, { error: 'Invalid JSON' });
+                return;
+            }
+            const targetPath = payload.path || '';
+            const absPath = path.resolve(BASE_DIR, targetPath);
+            if (!absPath.startsWith(path.resolve(BASE_DIR))) {
+                jsonResponse(res, 403, { error: 'Access denied' });
+                return;
+            }
+            // If it's a file, open its containing folder and select it
+            if (fs.existsSync(absPath) && fs.statSync(absPath).isFile()) {
+                exec(`explorer /select,"${absPath}"`, (err) => { if (err) console.error('[OPEN]', err.message); });
+            } else {
+                exec(`explorer "${absPath}"`, (err) => { if (err) console.error('[OPEN]', err.message); });
+            }
+            jsonResponse(res, 200, { status: 'opened', path: targetPath });
+        });
+        return;
+    }
+
     // Static file serving — try launcher dir first, then games dir (for game assets)
     const decodedPath = decodeURIComponent(pathname);
     const requestedFile = decodedPath === '/' ? 'index.html' : decodedPath;
@@ -1004,8 +1353,10 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`\n  \uD83D\uDD25 AMATRIS running at http://localhost:${PORT}\n`);
+    console.log(`\n  \uD83D\uDD25 LUMINA running at http://localhost:${PORT}\n`);
     if (IS_PKG) {
         exec(`start http://localhost:${PORT}`);
     }
 });
+
+module.exports = { server, PORT };

@@ -1,5 +1,5 @@
 /* ============================================================
-   AMATRIS — Game Portal Styles
+   LUMINA — Game Portal Styles
    Dark tactical theme with studio launcher.
    ============================================================ */
 
@@ -14,6 +14,8 @@ body {
     height: 100vh;
     width: 100vw;
     user-select: none;
+    display: flex;
+    flex-direction: column;
 }
 
 /* --- Background Layers --- */
@@ -41,23 +43,44 @@ body {
     100% { opacity: 1; }
 }
 
-/* Fire-Wolf Logo */
-#logo-icon {
-    position: fixed;
-    top: 16px;
-    right: 24px;
-    width: 80px;
-    height: 80px;
-    z-index: 20;
-    pointer-events: auto;
-    cursor: pointer;
-    filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.4));
-    transition: transform 0.3s ease, filter 0.3s ease;
+/* ============================================================
+   APP SHELL — Persistent sticky header
+   ============================================================ */
+#app-shell {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    padding: 0 16px;
+    background: linear-gradient(180deg, #0c0b18 0%, #0a0916 100%);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
 }
 
-#logo-icon:hover {
-    transform: scale(1.1);
-    filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.6));
+#shell-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* Crystal icon — larger, prominent */
+#shell-crystal {
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.4));
+    transition: transform 0.3s ease, filter 0.3s ease;
+    flex-shrink: 0;
+}
+
+#shell-crystal:hover {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 16px rgba(212, 175, 55, 0.6));
 }
 
 #wolf-logo {
@@ -76,97 +99,268 @@ body {
     100% { opacity: 0.7; transform: translateY(1px); }
 }
 
-/* Gamepad focus on menu tabs (LB/RB switching) */
-.menu-tab.gamepad-focus {
-    color: #f0c850;
-    text-shadow: 0 0 10px rgba(240, 200, 80, 0.5);
-}
-
-.menu-tab.gamepad-focus::after {
-    background: linear-gradient(90deg, transparent, #f0c850, transparent);
-    transform: scaleX(1);
-    opacity: 1;
-}
-
-/* --- Header / Logo --- */
-#portal-header {
-    position: relative;
-    z-index: 10;
-    text-align: center;
-    padding: 36px 0 8px;
-}
-
-.logo {
-    font-size: 2.4rem;
-    font-weight: 600;
-    letter-spacing: 0.35em;
-    text-transform: uppercase;
-    color: #b8b0a0;
-}
-.logo span {
-    color: #f0c850;
+#shell-title {
+    font-size: 1.1rem;
     font-weight: 700;
-}
-
-/* --- Top Mini Menu Bar --- */
-#top-menu {
-    position: relative;
-    z-index: 10;
-    text-align: center;
-    padding: 4px 8px;
-}
-
-#top-menu.hidden { display: none; }
-
-#menu-tabs {
-    list-style: none;
-    display: inline-flex;
-    gap: 28px;
-}
-
-.menu-tab {
-    font-size: 0.72rem;
+    letter-spacing: 0.3em;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    color: #d4af37;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+/* --- Mode Tabs --- */
+#mode-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.mode-tab {
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     color: #6a6450;
     cursor: pointer;
+    padding: 6px 14px;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s, text-shadow 0.2s;
     position: relative;
-    padding-bottom: 4px;
-    transition: color 0.25s ease, text-shadow 0.25s ease;
 }
 
-.menu-tab:hover {
+.mode-tab:hover {
     color: #b8b0a0;
-    text-shadow: 0 0 6px rgba(184, 176, 160, 0.3);
+    background: rgba(255, 255, 255, 0.03);
 }
 
-.menu-tab.active {
+.mode-tab.active {
     color: #f0c850;
-    text-shadow: 0 0 8px rgba(240, 200, 80, 0.4);
+    background: rgba(240, 200, 80, 0.08);
+    text-shadow: 0 0 8px rgba(240, 200, 80, 0.3);
 }
 
-.menu-tab::after {
+.mode-tab.active::after {
     content: '';
     position: absolute;
     bottom: 0;
-    left: 0;
-    right: 0;
+    left: 20%;
+    right: 20%;
     height: 2px;
     border-radius: 1px;
-    transform: scaleX(0);
-    transition: transform 0.25s ease, opacity 0.25s ease;
+    background: #f0c850;
 }
 
-.menu-tab.active::after {
-    background: linear-gradient(90deg, transparent, #f0c850, transparent);
-    transform: scaleX(1);
-    opacity: 1;
+.mode-tab.gamepad-focus {
+    color: #f0c850;
+    text-shadow: 0 0 10px rgba(240, 200, 80, 0.5);
+    outline: 1px solid rgba(240, 200, 80, 0.3);
 }
 
-.menu-tab:not(.active):hover::after {
-    background: linear-gradient(90deg, transparent, rgba(184, 176, 160, 0.4), transparent);
-    transform: scaleX(1);
-    opacity: 1;
+/* --- Shell Center: Pin Tray --- */
+#shell-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+}
+
+#pin-tray {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 480px;
+}
+
+#pin-tray:empty::before {
+    content: 'Pin games for quick access';
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    color: #3a3530;
+    text-transform: uppercase;
+}
+
+.pin-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 4px 10px 4px 6px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    max-width: 220px;
+    flex-shrink: 0;
+}
+
+.pin-chip:hover {
+    background: rgba(240, 200, 80, 0.06);
+    border-color: rgba(240, 200, 80, 0.2);
+}
+
+.pin-chip-icon {
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.pin-chip-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.pin-chip-name {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #e0dcd0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.02em;
+}
+
+.pin-chip-meta {
+    font-size: 0.55rem;
+    color: #6a6450;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+}
+
+.pin-chip-pct {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #d4af37;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding-left: 6px;
+}
+
+.pin-chip-unpin {
+    font-size: 0.65rem;
+    color: #504840;
+    cursor: pointer;
+    margin-left: 4px;
+    flex-shrink: 0;
+    transition: color 0.15s;
+}
+
+.pin-chip-unpin:hover {
+    color: #ef4444;
+}
+
+/* --- Shell Right: Launcher Icons --- */
+#shell-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.shell-launcher {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    padding: 5px 10px;
+    color: #8a8470;
+    font-family: inherit;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.shell-launcher:hover {
+    background: rgba(240, 200, 80, 0.08);
+    border-color: rgba(240, 200, 80, 0.25);
+    color: #f0c850;
+}
+
+.shell-launcher svg {
+    flex-shrink: 0;
+}
+
+/* ============================================================
+   MODE CONTENT — Container switching
+   ============================================================ */
+.mode-content {
+    display: none;
+    height: calc(100vh - 52px);
+    overflow: hidden;
+}
+
+.mode-content.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Empty state for stub modes */
+.mode-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #3a3530;
+}
+
+.mode-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+    opacity: 0.3;
+}
+
+.mode-empty-state h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #4a4540;
+    margin-bottom: 8px;
+}
+
+.mode-empty-state p {
+    font-size: 0.75rem;
+    color: #3a3530;
+    letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   THIN SCROLLBAR — Lumina accent
+   ============================================================ */
+.lumina-scroll::-webkit-scrollbar,
+#studio-game-list::-webkit-scrollbar,
+.mode-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.lumina-scroll::-webkit-scrollbar-track,
+#studio-game-list::-webkit-scrollbar-track,
+.mode-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.lumina-scroll::-webkit-scrollbar-thumb,
+#studio-game-list::-webkit-scrollbar-thumb,
+.mode-content::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.15);
+    border-radius: 3px;
+}
+
+.lumina-scroll::-webkit-scrollbar-thumb:hover,
+#studio-game-list::-webkit-scrollbar-thumb:hover,
+.mode-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 175, 55, 0.3);
 }
 
 /* (Carousel and stats panel removed — replaced by Studio dashboard) */

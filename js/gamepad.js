@@ -1,5 +1,5 @@
 /* ============================================================
-   gamepad.js — Xbox controller support for AMATRIS
+   gamepad.js — Xbox controller support for LUMINA
    Polls the Gamepad API, emits semantic actions via InputManager.
    Context-aware routing: launcher, detail_panel, file_preview,
    gameplay, overlay.

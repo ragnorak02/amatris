@@ -11,7 +11,7 @@ It reads JSON only.
 
 ## Mandatory Verification
 
-Claude must run the implementation-verification skill before reporting completion of any task involving code changes, scene changes, UI changes, or system modifications.
+Codex must run the implementation-verification skill before reporting completion of any task involving code changes, scene changes, UI changes, or system modifications.
 
 Verification must include:
 
@@ -68,7 +68,7 @@ Verification must include:
 # Phase 3 — File Viewer System
 
 ## Modal Viewer
-- [x] Open CLAUDE.md in preview modal
+- [x] Open AGENTS.md in preview modal
 - [x] Open project_status.json (pretty printed)
 - [x] Open game.config.json
 - [x] Open test_results.json
@@ -111,7 +111,7 @@ Verification must include:
 - [x] Highlight failing tests
 
 Lumina MUST NOT:
-- Modify CLAUDE.md automatically
+- Modify AGENTS.md automatically
 - Rewrite game files silently
 - Parse markdown for metrics
 
@@ -144,39 +144,14 @@ Lumina MUST NOT:
 
 ---
 
-# Phase 8 — Shared Asset Pipeline
-
-## Asset Infrastructure
-- [x] shared_assets/ directory with 3d/2d/audio/textures folders
-- [x] asset.meta.json schema per asset
-- [x] catalog.json auto-generation
-- [x] asset_sync.js CLI (sync, rebuild, status, init-asset)
-- [x] Server API (GET /api/assets, sync-status, sync, rebuild-catalog)
-- [x] /import-assets Claude skill
-- [x] "Assets" column in dashboard table
-
-## Named Packages
-- [x] shared_assets/packages.json definition file
-- [x] Package-based sync resolution in asset_sync.js
-- [x] GET /api/assets/packages endpoint
-- [x] POST /api/games/:gameId/packages endpoint
-- [x] sharedAssetPackages field in game API response
-- [x] Dashboard expand row "Shared Assets" section (5th column)
-- [x] Package management modal (toggle per-game subscriptions)
-- [x] Package Matrix toolbar view (games x packages grid)
-- [x] Backward compatible with pool-based sync
-
----
-
 # Non-Negotiable Rules
 
 - Dashboard reads JSON only.
 - project_status.json is single source of truth.
-- CLAUDE.md is human/AI guidance only.
+- AGENTS.md is human/AI guidance only.
 - Timestamps are minute precision ISO8601.
 - Git hooks handle timestamp automation.
 - The dashboard HTML file is `lumina dashboard.html` — there is no other dashboard HTML file.
-- Package definitions live in `shared_assets/packages.json`.
 
 ---
 

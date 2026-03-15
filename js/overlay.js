@@ -1,5 +1,5 @@
 /* ============================================================
-   overlay.js — In-game overlay system for AMATRIS
+   overlay.js — In-game overlay system for LUMINA
    Toggle with Shift+Tab. Single-screen layout with shortcut
    tile strip, instructions banner, game info, and expandable
    modules (volume, screen, screenshots, settings).

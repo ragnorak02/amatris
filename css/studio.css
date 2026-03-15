@@ -1,5 +1,5 @@
 /* ============================================================
-   Studio Dashboard Styles — AMATRIS
+   Studio Dashboard Styles — LUMINA
    Sidebar + dense portrait card grid layout.
    ============================================================ */
 
@@ -11,7 +11,8 @@
     z-index: 10;
     display: grid;
     grid-template-columns: 220px 1fr;
-    height: calc(100vh - 90px);
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
 }
 
@@ -155,6 +156,7 @@
     flex-direction: column;
     overflow: hidden;
     padding: 0 20px;
+    min-height: 0;
 }
 
 /* ============================================================
@@ -319,7 +321,6 @@
     display: flex;
     flex-direction: column;
     background: #0c0c1a;
-    aspect-ratio: 3 / 4;
 }
 
 .game-card:hover {
@@ -338,7 +339,7 @@
 
 /* Cover art area */
 .game-card-art {
-    flex: 1;
+    aspect-ratio: 4 / 3;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -559,6 +560,59 @@
 }
 
 /* ============================================================
+   EXPAND ROW ACTIONS — Mini control bar on selected cards
+   ============================================================ */
+.card-expand-actions {
+    display: none;
+    gap: 2px;
+    padding: 4px 6px;
+    background: rgba(0, 0, 0, 0.5);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+.game-card.selected .card-expand-actions,
+.game-card.gamepad-focus .card-expand-actions {
+    display: flex;
+}
+
+.expand-action {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: #8a8470;
+    font-family: inherit;
+    font-size: 0.58rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.expand-action:hover {
+    background: rgba(240, 200, 80, 0.1);
+    border-color: rgba(240, 200, 80, 0.3);
+    color: #f0c850;
+}
+
+.ea-icon {
+    font-size: 0.6rem;
+    flex-shrink: 0;
+}
+
+.ea-label {
+    line-height: 1;
+}
+
+/* ============================================================
    KEYBOARD / GAMEPAD FOCUS
    ============================================================ */
 .game-card.gamepad-focus,
@@ -574,13 +628,13 @@
    ============================================================ */
 #studio-detail-panel {
     position: fixed;
-    top: 0;
+    top: 52px;
     right: 0;
     width: 420px;
-    height: 100vh;
-    z-index: 80;
+    height: calc(100vh - 52px);
+    z-index: 1050;
     background: rgba(8, 8, 20, 0.98);
-    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    border-left: 1px solid rgba(212, 175, 55, 0.1);
     backdrop-filter: blur(12px);
     display: flex;
     flex-direction: column;
@@ -1002,6 +1056,16 @@
 .studio-empty-icon { font-size: 2rem; margin-bottom: 12px; opacity: 0.5; }
 .studio-empty-text { font-size: 0.85rem; letter-spacing: 0.04em; }
 
+.studio-loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(240, 200, 80, 0.15);
+    border-top-color: #f0c850;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
+}
+
 /* ============================================================
    LAUNCH OVERLAY ANIMATION
    ============================================================ */
@@ -1040,7 +1104,7 @@
 #file-preview-modal {
     position: fixed;
     inset: 0;
-    z-index: 90;
+    z-index: 1100;
     display: flex;
     align-items: center;
     justify-content: center;

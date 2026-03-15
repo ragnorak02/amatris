@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AMATRIS — Studio Dashboard</title>
-<link rel="icon" href="amatris-fire.ico" type="image/x-icon">
+<title>LUMINA — Studio Dashboard</title>
+<link rel="icon" href="lumina-crystal.ico" type="image/x-icon">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -31,19 +31,65 @@
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
+    height: 100vh;
     font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
-  /* ---- Header ---- */
-  header {
-    padding: 1.5rem 2rem 1.2rem;
-    text-align: center;
-    background: linear-gradient(180deg, #12101f 0%, var(--bg) 100%);
-    border-bottom: 1px solid var(--border);
+  /* ---- App Shell ---- */
+  #app-shell {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    padding: 0 16px;
+    background: linear-gradient(180deg, #0c0b18 0%, #0a0916 100%);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
   }
-  header h1 { color: var(--gold); font-size: 1.6rem; letter-spacing: 0.02em; }
-  header p { color: var(--text-dim); margin-top: 0.2rem; font-size: 0.85rem; }
+  #shell-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #shell-crystal { width: 36px; height: 36px; cursor: pointer; filter: drop-shadow(0 0 8px rgba(212,175,55,0.4)); transition: transform 0.3s, filter 0.3s; flex-shrink: 0; }
+  #shell-crystal:hover { transform: scale(1.12); filter: drop-shadow(0 0 16px rgba(212,175,55,0.6)); }
+  #shell-crystal svg { width: 100%; height: 100%; overflow: visible; }
+  #shell-title { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold); margin-right: 8px; flex-shrink: 0; }
+  #mode-tabs { display: flex; align-items: center; gap: 2px; }
+  .mode-tab { background: none; border: none; font-family: inherit; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #6a6450; cursor: pointer; padding: 6px 14px; border-radius: 4px; transition: color 0.2s, background 0.2s; position: relative; }
+  .mode-tab:hover { color: #b8b0a0; background: rgba(255,255,255,0.03); }
+  .mode-tab.active { color: var(--gold-light); background: rgba(240,200,80,0.08); text-shadow: 0 0 8px rgba(240,200,80,0.3); }
+  .mode-tab.active::after { content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px; border-radius: 1px; background: var(--gold-light); }
+  #shell-center { flex: 1; display: flex; justify-content: center; align-items: center; min-width: 0; overflow: hidden; }
+  #pin-tray { display: flex; align-items: center; gap: 8px; max-width: 480px; }
+  #pin-tray:empty::before { content: 'Pin games for quick access'; font-size: 0.6rem; letter-spacing: 0.06em; color: #3a3530; text-transform: uppercase; }
+  .pin-chip { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px 4px 6px; cursor: pointer; transition: background 0.2s; max-width: 220px; flex-shrink: 0; }
+  .pin-chip:hover { background: rgba(240,200,80,0.06); border-color: rgba(240,200,80,0.2); }
+  .pin-chip-icon { font-size: 0.85rem; }
+  .pin-chip-name { font-size: 0.65rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pin-chip-meta { font-size: 0.55rem; color: #6a6450; }
+  .pin-chip-pct { font-size: 0.6rem; font-weight: 700; color: var(--gold); margin-left: auto; padding-left: 6px; }
+  .pin-chip-unpin { font-size: 0.65rem; color: #504840; cursor: pointer; margin-left: 4px; transition: color 0.15s; }
+  .pin-chip-unpin:hover { color: var(--red); }
+  #shell-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .shell-launcher { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 5px; padding: 5px 10px; color: #8a8470; font-family: inherit; font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s; }
+  .shell-launcher:hover { background: rgba(240,200,80,0.08); border-color: rgba(240,200,80,0.25); color: var(--gold-light); }
+  .shell-launcher svg { flex-shrink: 0; }
+
+  /* ---- Mode content ---- */
+  .mode-content { display: none; flex: 1; overflow: hidden; flex-direction: column; min-height: 0; }
+  .mode-content.active { display: flex; }
+  .mode-content::-webkit-scrollbar { width: 6px; }
+  .mode-content::-webkit-scrollbar-track { background: transparent; }
+  .mode-content::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.15); border-radius: 3px; }
+  .mode-content::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.3); }
+  .mode-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #3a3530; }
+  .mode-empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.3; }
+  .mode-empty-state h2 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #4a4540; margin-bottom: 6px; }
+  .mode-empty-state p { font-size: 0.75rem; color: #3a3530; }
 
   /* ---- Summary Bar ---- */
   #summaryBar {
@@ -52,6 +98,7 @@
     padding: 0.6rem 2rem;
     max-width: 1800px;
     margin: 0 auto;
+    flex-shrink: 0;
   }
   .stat-box {
     background: var(--header-bg);
@@ -70,7 +117,7 @@
   /* ---- Toolbar ---- */
   .toolbar {
     display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center;
-    padding: 0.6rem 2rem; max-width: 1800px; margin: 0 auto;
+    padding: 0.6rem 2rem; max-width: 1800px; margin: 0 auto; flex-shrink: 0;
   }
   .toolbar input[type="text"] {
     background: var(--header-bg); border: 1px solid var(--border);
@@ -87,6 +134,7 @@
   }
   .chip:hover { border-color: var(--gold); color: var(--text); }
   .chip.active { background: var(--gold); color: var(--bg); border-color: var(--gold); }
+  .chip-sep { width: 1px; height: 18px; background: var(--border); margin: 0 2px; }
 
   .toolbar-spacer { flex: 1; }
   .game-count { font-size: 0.72rem; color: var(--text-dark); margin-left: 0.3rem; }
@@ -102,9 +150,13 @@
 
   /* ---- Table ---- */
   .table-wrap {
-    overflow-x: auto; padding: 0 2rem 2rem;
-    max-width: 1800px; margin: 0 auto;
+    overflow-x: auto; overflow-y: auto; padding: 0 2rem 2rem;
+    max-width: 1800px; margin: 0 auto; flex: 1; min-height: 0;
   }
+  .table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+  .table-wrap::-webkit-scrollbar-track { background: transparent; }
+  .table-wrap::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.15); border-radius: 3px; }
+  .table-wrap::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.3); }
   table {
     width: 100%; border-collapse: collapse;
     font-size: 0.8rem;
@@ -217,6 +269,11 @@
   .ex-actions button:hover, .ex-actions a:hover { border-color: var(--gold); color: var(--gold); }
   .ex-actions .btn-t { background: rgba(0,212,255,0.1); color: var(--cyan); border-color: rgba(0,212,255,0.3); }
   .ex-actions .btn-t:hover { background: rgba(0,212,255,0.2); }
+  .ex-actions .btn-claude { background: rgba(212,175,55,0.1); color: var(--gold); border-color: rgba(212,175,55,0.3); }
+  .ex-actions .btn-claude:hover { background: rgba(212,175,55,0.25); }
+  .ex-actions .btn-action { background: rgba(255,255,255,0.04); color: var(--text-dim); border-color: rgba(255,255,255,0.1); }
+  .ex-actions .btn-action:hover { background: rgba(240,200,80,0.1); color: var(--gold); }
+  .ex-actions .btn-pin { color: var(--gold-light); }
   .ex-folder { font-size: 0.68rem; color: var(--text-dark); font-family: monospace; }
   .test-res {
     margin-top: 0.4rem; font-size: 0.7rem; padding: 0.35rem 0.55rem;
@@ -247,6 +304,14 @@
     cursor: pointer; transition: all 0.15s; line-height: 1; padding: 0;
   }
   .play-btn:hover { background: rgba(34,197,94,0.35); border-color: var(--gold); box-shadow: 0 0 6px rgba(212,175,55,0.3); }
+
+  .claude-btn {
+    background: rgba(212,145,75,0.12); color: #d4914b; border: 1px solid rgba(212,145,75,0.25);
+    border-radius: 4px; width: 26px; height: 24px; font-size: 0.75rem;
+    cursor: pointer; transition: all 0.15s; line-height: 1; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .claude-btn:hover { background: rgba(212,145,75,0.35); border-color: #d4914b; box-shadow: 0 0 6px rgba(212,145,75,0.4); }
 
   /* ---- Column resize handle ---- */
   .th-resize-handle {
@@ -301,7 +366,7 @@
 
   /* ---- Expand row flex layout ---- */
   .ex-content { display: flex; gap: 1.2rem; }
-  .ex-info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 1.2rem; flex: 1; min-width: 0; }
+  .ex-info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1.2fr 1fr; gap: 1.2rem; flex: 1; min-width: 0; }
 
   /* ---- Column group toggles ---- */
   .hide-core .core-col { display: none; }
@@ -337,14 +402,167 @@
   .gtog-cat:not(.off) { background: rgba(167,139,250,0.15); }
   .gtog-track { border-color: var(--green); color: var(--green); }
   .gtog-track:not(.off) { background: rgba(34,197,94,0.15); }
+
+  /* ---- Package badges in expand row ---- */
+  .pkg-badge {
+    display: inline-block; padding: 0.15rem 0.45rem; border-radius: 4px;
+    font-size: 0.68rem; font-weight: 600; margin: 0.15rem 0.2rem;
+    background: rgba(167,139,250,0.12); color: var(--purple);
+    border: 1px solid rgba(167,139,250,0.25);
+  }
+  .pkg-badge .pkg-count { font-size: 0.6rem; opacity: 0.7; margin-left: 3px; }
+
+  .btn-pkg {
+    background: rgba(167,139,250,0.1) !important; color: var(--purple) !important;
+    border-color: rgba(167,139,250,0.3) !important;
+  }
+  .btn-pkg:hover { background: rgba(167,139,250,0.25) !important; }
+
+  /* ---- Package Modal ---- */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 1100;
+    background: rgba(0,0,0,0.7); display: none;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #12101f; border: 1px solid var(--border);
+    border-radius: 10px; width: 560px; max-width: 94vw;
+    max-height: 80vh; display: flex; flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.2rem; border-bottom: 1px solid var(--border);
+  }
+  .modal-header h3 { color: var(--gold); font-size: 0.95rem; }
+  .modal-close {
+    background: none; border: none; color: var(--text-dim); font-size: 1.2rem;
+    cursor: pointer; padding: 0.2rem 0.4rem; line-height: 1;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-body {
+    flex: 1; overflow-y: auto; padding: 0.8rem 1.2rem;
+  }
+  .modal-footer {
+    display: flex; gap: 0.5rem; justify-content: flex-end;
+    padding: 0.8rem 1.2rem; border-top: 1px solid var(--border);
+  }
+  .modal-footer button {
+    padding: 0.4rem 1rem; border-radius: 6px; font-size: 0.76rem;
+    font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+    background: var(--header-bg); color: var(--text-dim); transition: all 0.15s;
+  }
+  .modal-footer button:hover { border-color: var(--gold); color: var(--gold); }
+  .modal-footer button.modal-save {
+    background: var(--gold); color: var(--bg); border-color: var(--gold);
+  }
+  .modal-footer button.modal-save:hover { background: var(--gold-light); }
+
+  .pkg-row {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.6rem 0.7rem; margin-bottom: 0.4rem;
+    border: 1px solid var(--border); border-radius: 6px;
+    cursor: pointer; transition: all 0.15s; background: var(--row-odd);
+  }
+  .pkg-row:hover { border-color: var(--purple); background: #1a1730; }
+  .pkg-row.selected { border-color: var(--green); background: rgba(34,197,94,0.06); }
+  .pkg-row .pkg-check {
+    width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; flex-shrink: 0; transition: all 0.15s;
+  }
+  .pkg-row.selected .pkg-check { border-color: var(--green); color: var(--green); }
+  .pkg-row .pkg-info { flex: 1; min-width: 0; }
+  .pkg-row .pkg-name { font-weight: 600; font-size: 0.82rem; color: var(--text); }
+  .pkg-row .pkg-desc { font-size: 0.68rem; color: var(--text-dim); margin-top: 0.15rem; }
+  .pkg-row .pkg-meta {
+    font-size: 0.62rem; color: var(--text-dark); margin-top: 0.15rem;
+    display: flex; gap: 0.5rem;
+  }
+  .pkg-empty { text-align: center; padding: 2rem; color: var(--text-dark); font-size: 0.82rem; }
+
+  /* ---- Package Matrix ---- */
+  .matrix-section {
+    max-width: 1800px; margin: 0 auto; padding: 0 2rem 0.5rem;
+    display: none; flex-shrink: 0;
+  }
+  .matrix-section.open { display: block; }
+  .matrix-table {
+    width: 100%; border-collapse: collapse; font-size: 0.72rem;
+  }
+  .matrix-table th, .matrix-table td {
+    padding: 0.35rem 0.5rem; text-align: center;
+    border: 1px solid var(--border);
+  }
+  .matrix-table thead th {
+    background: var(--header-bg); color: var(--gold);
+    font-size: 0.65rem; text-transform: uppercase; font-weight: 600;
+    position: sticky; top: 0; z-index: 5;
+  }
+  .matrix-table tbody td:first-child {
+    text-align: left; font-weight: 600; color: var(--text);
+    position: sticky; left: 0; background: var(--row-even); z-index: 4;
+  }
+  .matrix-dot {
+    width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+  }
+  .matrix-dot.on { background: var(--green); }
+  .matrix-dot.off { background: #1a1830; }
+  .matrix-empty { text-align: center; padding: 1.5rem; color: var(--text-dark); font-size: 0.78rem; }
+  .toolbar .btn-matrix {
+    background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.3);
+    color: var(--purple);
+  }
+  .toolbar .btn-matrix:hover { background: rgba(167,139,250,0.25); border-color: var(--purple); }
+  .toolbar .btn-matrix.active { background: var(--purple); color: var(--bg); border-color: var(--purple); }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>AMATRIS Dashboard</h1>
-  <p>Studio Command Center</p>
+<!-- ============================================================
+     APP SHELL — Persistent sticky header across all modes
+     ============================================================ -->
+<header id="app-shell">
+  <div id="shell-left">
+    <div id="shell-crystal" title="LUMINA">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 8 L35 28 L20 18 L28 42 L18 52 L32 54 L30 70 L42 62 L50 75 L58 62 L70 70 L68 54 L82 52 L72 42 L80 18 L65 28 L50 8Z" fill="#d4af37" opacity="0.95"/>
+        <path d="M25 30 Q20 20 28 15 Q24 25 30 28Z" fill="#f0c850" opacity="0.8"/>
+        <path d="M75 30 Q80 20 72 15 Q76 25 70 28Z" fill="#f0c850" opacity="0.8"/>
+        <path d="M50 8 Q45 -2 50 -5 Q55 -2 50 8Z" fill="#f0c850" opacity="0.75"/>
+        <circle cx="40" cy="42" r="3" fill="#ff6030" opacity="0.95"/>
+        <circle cx="60" cy="42" r="3" fill="#ff6030" opacity="0.95"/>
+        <circle cx="40" cy="41.5" r="1.2" fill="#fff" opacity="0.9"/>
+        <circle cx="60" cy="41.5" r="1.2" fill="#fff" opacity="0.9"/>
+        <path d="M45 52 L50 58 L55 52" fill="none" stroke="#d4af37" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1 id="shell-title">LUMINA</h1>
+    <nav id="mode-tabs">
+      <button class="mode-tab active" data-mode="lumina">Lumina</button>
+      <button class="mode-tab" data-mode="claude">Claude</button>
+      <button class="mode-tab" data-mode="hunyuan">Hunyuan</button>
+      <button class="mode-tab" data-mode="audio">Audio</button>
+    </nav>
+  </div>
+  <div id="shell-center">
+    <div id="pin-tray"></div>
+  </div>
+  <div id="shell-right">
+    <button class="shell-launcher" id="launch-claude-lumina" title="Launch Claude (Lumina)">
+      <svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 1v14M1 8h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Claude</span>
+    </button>
+    <button class="shell-launcher" id="launch-claude-hunyuan" title="Launch Claude (ComfyUI / Hunyuan)">
+      <svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 14L8 2l6 12H2z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
+      <span>Hunyuan</span>
+    </button>
+  </div>
 </header>
+
+<!-- MODE: LUMINA — Dashboard -->
+<div id="mode-lumina" class="mode-content active">
 
 <div id="summaryBar">
   <div class="stat-box"><div class="sv" id="sP">—</div><div class="sl">Projects</div></div>
@@ -356,8 +574,14 @@
 <div class="toolbar">
   <input type="text" id="searchInput" placeholder="Search games...">
   <span class="chip" data-filter="engine" data-value="godot">Godot</span>
-  <span class="chip" data-filter="engine" data-value="unity">Unity</span>
   <span class="chip" data-filter="engine" data-value="html">HTML5</span>
+  <span class="chip-sep"></span>
+  <span class="chip" data-filter="genre" data-value="2d">2D</span>
+  <span class="chip" data-filter="genre" data-value="3d">3D</span>
+  <span class="chip" data-filter="genre" data-value="rpg">RPG</span>
+  <span class="chip" data-filter="genre" data-value="action">Action</span>
+  <span class="chip" data-filter="genre" data-value="platformer">Platformer</span>
+  <span class="chip-sep"></span>
   <span class="chip" data-filter="compliance" data-value="full">Full (8/8)</span>
   <span class="chip" data-filter="compliance" data-value="gaps">Has Gaps</span>
   <span class="game-count" id="gameCount"></span>
@@ -365,31 +589,38 @@
   <div class="group-toggles">
     <span class="gt-label">Columns</span>
     <div class="gtog gtog-core" data-group="core" title="Core">C</div>
-    <div class="gtog gtog-feat" data-group="feat" title="Features">F</div>
-    <div class="gtog gtog-comp" data-group="comp" title="Compliance">P</div>
+    <div class="gtog gtog-feat off" data-group="feat" title="Features">F</div>
+    <div class="gtog gtog-comp off" data-group="comp" title="Compliance">P</div>
     <div class="gtog gtog-cat off" data-group="cat" title="Categories">K</div>
     <div class="gtog gtog-track" data-group="track" title="Tracking">T</div>
   </div>
+  <button id="matrixBtn" class="btn-matrix">Package Matrix</button>
   <button id="runAllBtn">Run All Tests</button>
   <button id="refreshBtn" class="primary">Refresh</button>
+</div>
+
+<div class="matrix-section" id="matrixSection">
+  <div id="matrixContent"></div>
 </div>
 
 <div class="table-wrap">
   <table>
     <thead>
       <tr>
-        <th colspan="4"></th>
+        <th colspan="6"></th>
         <th class="gc core-col" colspan="5">Core</th>
-        <th class="gf feat-col" colspan="5">Features</th>
+        <th class="gf feat-col" colspan="6">Features</th>
         <th class="gp comp-col" colspan="5">Compliance</th>
         <th class="gk cat-col" colspan="5">Categories</th>
-        <th class="gt track-col" colspan="3">Tracking</th>
+        <th class="gt track-col" colspan="2">Tracking</th>
       </tr>
       <tr id="sortRow">
         <th data-sort="index" style="width:26px">#</th>
         <th style="width:28px"></th>
+        <th style="width:26px"></th>
         <th style="width:36px"></th>
         <th data-sort="name" class="al" style="width:180px">Game <span class="sa"></span></th>
+        <th data-sort="lastUpdated" style="width:90px">Updated <span class="sa"></span></th>
         <th data-sort="engine" class="core-col" style="width:70px">Engine <span class="sa"></span></th>
         <th data-sort="phase" class="core-col" style="width:65px">Phase <span class="sa"></span></th>
         <th data-sort="completion" class="core-col" style="width:72px">Comp% <span class="sa"></span></th>
@@ -400,6 +631,7 @@
         <th data-sort="achievements" class="feat-col" style="width:42px">Achv.</th>
         <th data-sort="testingScripts" class="feat-col" style="width:42px">Tests</th>
         <th data-sort="documentationComplete" class="feat-col" style="width:42px">Docs</th>
+        <th class="feat-col" style="width:46px">Assets</th>
         <th data-sort="complianceScore" class="comp-col" style="width:46px">Score <span class="sa"></span></th>
         <th class="comp-col" style="width:40px">CL</th>
         <th class="comp-col" style="width:40px">Dir</th>
@@ -412,25 +644,75 @@
         <th class="cat-col" style="width:48px">Music</th>
         <th data-sort="lastEditFile" class="al track-col" style="width:110px">Last Edit <span class="sa"></span></th>
         <th class="al track-col" style="width:160px">Last Change</th>
-        <th data-sort="lastUpdated" class="track-col" style="width:110px">Updated <span class="sa"></span></th>
       </tr>
     </thead>
     <tbody id="tBody">
-      <tr><td colspan="27" class="loading">Loading game data...</td></tr>
+      <tr><td colspan="29" class="loading">Loading game data...</td></tr>
     </tbody>
   </table>
 </div>
 
 <div id="toast"></div>
 
+<div class="modal-overlay" id="pkgModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="pkgModalTitle">Manage Packages</h3>
+      <button class="modal-close" id="pkgModalClose">&times;</button>
+    </div>
+    <div class="modal-body" id="pkgModalBody"></div>
+    <div class="modal-footer">
+      <button id="pkgModalCancel">Cancel</button>
+      <button class="modal-save" id="pkgModalSave">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /mode-lumina -->
+
+<!-- MODE: CLAUDE -->
+<div id="mode-claude" class="mode-content">
+  <div class="mode-empty-state">
+    <div class="mode-empty-icon">&#9670;</div>
+    <h2>Claude Sessions</h2>
+    <p>Lumina-scoped ClaudeCount view</p>
+  </div>
+</div>
+
+<!-- MODE: HUNYUAN -->
+<div id="mode-hunyuan" class="mode-content">
+  <div class="mode-empty-state">
+    <div class="mode-empty-icon">&#9651;</div>
+    <h2>3D Asset Browser</h2>
+    <p>Hunyuan / ComfyUI asset browser</p>
+  </div>
+</div>
+
+<!-- MODE: AUDIO -->
+<div id="mode-audio" class="mode-content">
+  <div class="mode-empty-state">
+    <div class="mode-empty-icon">&#9835;</div>
+    <h2>Audio Browser</h2>
+    <p>Studio audio asset browser</p>
+  </div>
+</div>
+
+<!-- Tab modules -->
+<script src="js/claude-tab.js"></script>
+<script src="js/hunyuan-tab.js"></script>
+<script src="js/audio-tab.js"></script>
+
 <script>
 (function() {
   var allGames = [];
+  var allPackages = [];
   var sortCol = 'lastUpdated';
   var sortDir = 'desc';
   var expandedId = null;
-  var activeFilters = { engine: {}, compliance: {} };
+  var activeFilters = { engine: {}, compliance: {}, genre: {} };
   var searchTimer = null;
+  var pkgModalGameId = null;
+  var pkgModalSelected = [];
 
   var tbody = document.getElementById('tBody');
   var searchInput = document.getElementById('searchInput');
@@ -447,9 +729,18 @@
       return data;
     }).catch(function(err) {
       console.error('[Dashboard] Fetch failed:', err);
-      tbody.innerHTML = '<tr><td colspan="27" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="29" style="text-align:center;padding:2rem;color:var(--red)">Failed to load games. Is the server running on this port?</td></tr>';
       return [];
     });
+  }
+
+  function loadPackages() {
+    return fetch('/api/assets/packages').then(function(r) {
+      if (!r.ok) return [];
+      return r.json();
+    }).then(function(data) {
+      return (data && data.packages) || [];
+    }).catch(function() { return []; });
   }
 
   /* ---- Summary ---- */
@@ -553,6 +844,14 @@
     if (!msg) return '<span class="iu">\u2014</span>';
     var short = msg.length > 28 ? msg.substring(0, 26) + '\u2026' : msg;
     return '<span style="font-size:0.66rem;color:var(--text-dim)" title="' + esc(msg) + '">' + esc(short) + '</span>';
+  }
+
+  function assetBadge(g) {
+    var h = (g.projectHealth && g.projectHealth.sharedAssetSync) || (g.health && g.health.sharedAssetSync);
+    if (!h) return '<span class="iu">\u2014</span>';
+    var s = h.synced || 0, e = h.eligible || 0;
+    var c = e === 0 ? 'badge-y' : s >= e ? 'badge-g' : s > 0 ? 'badge-y' : 'badge-r';
+    return '<span class="badge ' + c + '" title="' + s + ' synced / ' + e + ' eligible">' + s + '/' + e + '</span>';
   }
 
   function engCls(t) { return t === 'godot' ? 'eg' : t === 'unity' ? 'eu' : t === 'html' ? 'eh' : ''; }
@@ -679,7 +978,7 @@
   function renderTable(games) {
     gcEl.textContent = games.length + ' game' + (games.length !== 1 ? 's' : '');
     if (!games.length) {
-      tbody.innerHTML = '<tr><td colspan="27" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="29" style="text-align:center;padding:2rem;color:var(--text-dark)">No games match your filters.</td></tr>';
       return;
     }
     var h = '';
@@ -695,12 +994,15 @@
       /* Always visible */
       h += '<td class="ci">' + (i + 1) + '</td>';
       h += '<td><button class="play-btn" data-game="' + g.id + '" data-name="' + esc(g.name) + '" title="Launch ' + esc(g.name) + '">\u25B6</button></td>';
+      h += '<td><button class="claude-btn" data-game="' + g.id + '" title="Launch Claude Code"><svg viewBox="0 0 16 16" width="14" height="14" shape-rendering="crispEdges"><rect x="3" y="0" width="2" height="4" fill="#cc5b3e"/><rect x="11" y="0" width="2" height="4" fill="#cc5b3e"/><rect x="2" y="4" width="12" height="8" fill="#cc5b3e"/><rect x="5" y="6" width="2" height="2" fill="#fff"/><rect x="9" y="6" width="2" height="2" fill="#fff"/><rect x="3" y="12" width="3" height="2" fill="#cc5b3e"/><rect x="10" y="12" width="3" height="2" fill="#cc5b3e"/></svg></button></td>';
       h += '<td>' + artThumb(g) + '</td>';
       h += '<td class="al cn">' + esc(g.name);
       if (c.missingFiles && c.missingFiles.length > 0 && (c.complianceScore || 0) < 5) {
         h += '<span class="mpill" title="Missing: ' + esc(c.missingFiles.join(', ')) + '">' + c.missingFiles.length + ' gaps</span>';
       }
       h += '</td>';
+      /* Updated (always visible) */
+      h += '<td>' + fmtTimestamp(dt.lastCodeUpdate) + '</td>';
       /* Core */
       h += '<td class="core-col ' + engCls(g.engineType) + '">' + esc(g.engine) + '</td>';
       h += '<td class="core-col ' + phsCls(g.phase) + '">' + esc(g.phase) + '</td>';
@@ -713,6 +1015,7 @@
       h += '<td class="feat-col">' + triIcon(f.achievements) + '</td>';
       h += '<td class="feat-col">' + triIcon(f.testingScripts) + '</td>';
       h += '<td class="feat-col">' + triIcon(f.documentationComplete) + '</td>';
+      h += '<td class="feat-col">' + assetBadge(g) + '</td>';
       /* Compliance */
       h += '<td class="comp-col">' + cBadge(c.complianceScore || 0, c.complianceTotal || 8) + '</td>';
       h += '<td class="comp-col">' + boolIcon(c.hasClaudeMd) + '</td>';
@@ -728,7 +1031,6 @@
       /* Tracking */
       h += '<td class="al track-col">' + fmtEditFile(dt.lastCodeFile) + '</td>';
       h += '<td class="al track-col">' + fmtCommitMsg(dt.lastCommitMsg) + '</td>';
-      h += '<td class="track-col">' + fmtTimestamp(dt.lastCodeUpdate) + '</td>';
       h += '</tr>';
 
       if (ex) h += buildExpand(g);
@@ -744,7 +1046,7 @@
     var tech = g.tech || {};
     var ts = g.testingStatus || {};
 
-    var h = '<tr class="expand-row"><td colspan="27"><div class="ex-content">';
+    var h = '<tr class="expand-row"><td colspan="29"><div class="ex-content">';
 
     /* Art panel */
     h += buildArtPanel(g);
@@ -814,6 +1116,30 @@
     }
     h += '</div>';
 
+    /* 5th column: Shared Assets */
+    h += '<div class="ex-section"><h4>Shared Assets</h4>';
+    var gamePkgs = g.sharedAssetPackages || [];
+    if (gamePkgs.length > 0 && allPackages.length > 0) {
+      gamePkgs.forEach(function(pid) {
+        var pkg = null;
+        for (var pi = 0; pi < allPackages.length; pi++) {
+          if (allPackages[pi].id === pid) { pkg = allPackages[pi]; break; }
+        }
+        if (pkg) {
+          h += '<span class="pkg-badge">' + esc(pkg.name) + '<span class="pkg-count">(' + pkg.assetCount + ')</span></span>';
+        } else {
+          h += '<span class="pkg-badge" style="opacity:0.5">' + esc(pid) + ' <span class="pkg-count">(missing)</span></span>';
+        }
+      });
+    } else if (gamePkgs.length > 0) {
+      gamePkgs.forEach(function(pid) {
+        h += '<span class="pkg-badge" style="opacity:0.5">' + esc(pid) + '</span>';
+      });
+    } else {
+      h += '<div class="ex-item">No packages subscribed</div>';
+    }
+    h += '</div>';
+
     h += '</div>'; /* end ex-info-grid */
     h += '</div>'; /* end ex-content */
 
@@ -822,6 +1148,12 @@
     if (g.files && g.files.claudeMd) h += '<a href="/api/file?path=' + encodeURIComponent(g.files.claudeMd) + '" target="_blank">View CLAUDE.md</a>';
     if (g.files && g.files.gameDirection) h += '<a href="/api/file?path=' + encodeURIComponent(g.files.gameDirection) + '" target="_blank">View Direction</a>';
     if (g.hasTestRunner) h += '<button class="btn-t" onclick="event.stopPropagation();window._runTest(\'' + g.id + '\')">Run Tests</button>';
+    h += '<button class="btn-pkg" onclick="event.stopPropagation();window._openPkgModal(\'' + g.id + '\')">Manage Packages</button>';
+    h += '<button class="btn-claude" onclick="event.stopPropagation();launchClaude(\'' + g.id + '\')" title="Launch Claude Code with --dangerously-skip-permissions">Claude Code</button>';
+    h += '<button class="btn-action" onclick="event.stopPropagation();fetch(\'/api/open-terminal/\'+encodeURIComponent(\'' + esc(g.folder) + '\'),{method:\'POST\'})" title="Open Terminal">&gt;_ Terminal</button>';
+    h += '<button class="btn-action" onclick="event.stopPropagation();fetch(\'/api/open-vscode/\'+encodeURIComponent(\'' + esc(g.folder) + '\'),{method:\'POST\'})" title="Open VS Code">{} VS Code</button>';
+    h += '<button class="btn-action" onclick="event.stopPropagation();fetch(\'/api/open-folder/\'+encodeURIComponent(\'' + esc(g.folder) + '\'),{method:\'POST\'})" title="Open Folder">\uD83D\uDCC2 Folder</button>';
+    h += '<button class="btn-action btn-pin" onclick="event.stopPropagation();window.luminaPinGame(\'' + g.id + '\',\'' + esc(g.name).replace(/'/g, "\\'") + '\',' + (g.completion || 0) + ')" title="Pin to tray">\u2606 Pin</button>';
     h += '<span class="ex-folder">' + esc(g.folder) + '/</span>';
     h += '</div>';
 
@@ -865,10 +1197,23 @@
   }
 
   /* ---- Filtering ---- */
+  function matchesGenreFilter(g, key) {
+    var combined = ((g.genre || '') + ' ' + (g.tags || []).join(' ')).toLowerCase();
+    switch (key) {
+      case '2d': return combined.indexOf('2d') !== -1 || combined.indexOf('platformer') !== -1 || combined.indexOf('side-scroll') !== -1;
+      case '3d': return combined.indexOf('3d') !== -1;
+      case 'rpg': return combined.indexOf('rpg') !== -1;
+      case 'action': return combined.indexOf('action') !== -1 || combined.indexOf('fighter') !== -1 || combined.indexOf('combat') !== -1;
+      case 'platformer': return combined.indexOf('platformer') !== -1 || combined.indexOf('platform') !== -1;
+      default: return true;
+    }
+  }
+
   function doFilter(games) {
     var q = searchInput.value.toLowerCase().trim();
     var ef = Object.keys(activeFilters.engine).filter(function(k) { return activeFilters.engine[k]; });
     var cf = Object.keys(activeFilters.compliance).filter(function(k) { return activeFilters.compliance[k]; });
+    var gf = Object.keys(activeFilters.genre).filter(function(k) { return activeFilters.genre[k]; });
 
     return games.filter(function(g) {
       if (q) {
@@ -876,6 +1221,13 @@
         if (hay.indexOf(q) === -1) return false;
       }
       if (ef.length > 0 && ef.indexOf(g.engineType) === -1) return false;
+      if (gf.length > 0) {
+        var genreMatch = false;
+        for (var gi = 0; gi < gf.length; gi++) {
+          if (matchesGenreFilter(g, gf[gi])) { genreMatch = true; break; }
+        }
+        if (!genreMatch) return false;
+      }
       if (cf.length > 0) {
         var cs = g.dashboard && g.dashboard.compliance ? g.dashboard.compliance.complianceScore : 0;
         var ct = g.dashboard && g.dashboard.compliance ? g.dashboard.compliance.complianceTotal : 8;
@@ -900,12 +1252,18 @@
     if (expandedId) startArtCycle();
   }
 
-  /* ---- Row click → expand/collapse (skip play buttons) ---- */
+  /* ---- Row click → expand/collapse (skip play/claude buttons) ---- */
   tbody.addEventListener('click', function(e) {
     var btn = e.target.closest('.play-btn');
     if (btn) {
       e.stopPropagation();
       window._launchGame(btn.getAttribute('data-game'), btn.getAttribute('data-name'));
+      return;
+    }
+    var cbtn = e.target.closest('.claude-btn');
+    if (cbtn) {
+      e.stopPropagation();
+      launchClaude(cbtn.getAttribute('data-game'));
       return;
     }
     var row = e.target.closest('tr.game-row');
@@ -967,8 +1325,10 @@
 
   /* ---- Group column toggles ---- */
   var tableWrap = document.querySelector('.table-wrap');
-  // Categories hidden by default
+  // Categories, Features, Compliance hidden by default
   tableWrap.classList.add('hide-cat');
+  tableWrap.classList.add('hide-feat');
+  tableWrap.classList.add('hide-comp');
 
   var gtogs = document.querySelectorAll('.gtog');
   for (var gi = 0; gi < gtogs.length; gi++) {
@@ -999,6 +1359,17 @@
       });
   };
 
+  /* ---- Launch Claude Code ---- */
+  function launchClaude(gameId) {
+    fetch('/api/claude/' + gameId, { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.status === 'launched') showToast('Claude Code launched for ' + gameId, 'success');
+        else showToast('Error: ' + (res.error || 'unknown'), 'error');
+      })
+      .catch(function(err) { showToast('Error: ' + err.message, 'error'); });
+  }
+
   /* ---- Run All Tests ---- */
   document.getElementById('runAllBtn').addEventListener('click', function() {
     var btn = this;
@@ -1022,7 +1393,7 @@
 
   /* ---- Refresh ---- */
   document.getElementById('refreshBtn').addEventListener('click', function() {
-    tbody.innerHTML = '<tr><td colspan="27" class="loading">Refreshing...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="29" class="loading">Refreshing...</td></tr>';
     loadData().then(function(games) { allGames = games; filterAndRender(); });
   });
 
@@ -1083,17 +1454,233 @@
     setTimeout(function() { t.classList.remove('show'); }, 4000);
   }
 
+  /* ---- Package Modal ---- */
+  var pkgModalEl = document.getElementById('pkgModal');
+  var pkgModalBody = document.getElementById('pkgModalBody');
+
+  window._openPkgModal = function(gameId) {
+    var game = null;
+    for (var i = 0; i < allGames.length; i++) {
+      if (allGames[i].id === gameId) { game = allGames[i]; break; }
+    }
+    if (!game) return;
+    pkgModalGameId = gameId;
+    pkgModalSelected = (game.sharedAssetPackages || []).slice();
+    document.getElementById('pkgModalTitle').textContent = 'Manage Packages — ' + (game.name || gameId);
+    renderPkgModal();
+    pkgModalEl.classList.add('open');
+  };
+
+  function renderPkgModal() {
+    if (allPackages.length === 0) {
+      pkgModalBody.innerHTML = '<div class="pkg-empty">No packages defined yet.<br>Add packages to <code>shared_assets/packages.json</code> to get started.</div>';
+      return;
+    }
+    var h = '';
+    allPackages.forEach(function(pkg) {
+      var sel = pkgModalSelected.indexOf(pkg.id) !== -1;
+      h += '<div class="pkg-row' + (sel ? ' selected' : '') + '" data-pkg="' + esc(pkg.id) + '">';
+      h += '<div class="pkg-check">' + (sel ? '\u2714' : '') + '</div>';
+      h += '<div class="pkg-info">';
+      h += '<div class="pkg-name">' + esc(pkg.name) + '</div>';
+      if (pkg.description) h += '<div class="pkg-desc">' + esc(pkg.description) + '</div>';
+      h += '<div class="pkg-meta">';
+      h += '<span>' + pkg.assetCount + ' assets</span>';
+      if (pkg.dimension) h += '<span>' + esc(pkg.dimension) + '</span>';
+      if (pkg.theme) h += '<span>' + esc(pkg.theme) + '</span>';
+      if (pkg.category) h += '<span>' + esc(pkg.category) + '</span>';
+      h += '</div></div></div>';
+    });
+    pkgModalBody.innerHTML = h;
+  }
+
+  pkgModalBody.addEventListener('click', function(e) {
+    var row = e.target.closest('.pkg-row');
+    if (!row) return;
+    var pkgId = row.getAttribute('data-pkg');
+    var idx = pkgModalSelected.indexOf(pkgId);
+    if (idx !== -1) pkgModalSelected.splice(idx, 1);
+    else pkgModalSelected.push(pkgId);
+    renderPkgModal();
+  });
+
+  function closePkgModal() {
+    pkgModalEl.classList.remove('open');
+    pkgModalGameId = null;
+    pkgModalSelected = [];
+  }
+
+  document.getElementById('pkgModalClose').addEventListener('click', closePkgModal);
+  document.getElementById('pkgModalCancel').addEventListener('click', closePkgModal);
+  pkgModalEl.addEventListener('click', function(e) {
+    if (e.target === pkgModalEl) closePkgModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && pkgModalEl.classList.contains('open')) closePkgModal();
+  });
+
+  document.getElementById('pkgModalSave').addEventListener('click', function() {
+    if (!pkgModalGameId) return;
+    var btn = this;
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+    fetch('/api/games/' + pkgModalGameId + '/packages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ packages: pkgModalSelected })
+    }).then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.status === 'updated') {
+        showToast('Packages updated for ' + pkgModalGameId, 'success');
+        // Refresh data
+        Promise.all([loadData(), loadPackages()]).then(function(results) {
+          allGames = results[0];
+          allPackages = results[1];
+          filterAndRender();
+          renderMatrix();
+        });
+      } else {
+        showToast('Error: ' + (res.error || 'unknown'), 'error');
+      }
+      closePkgModal();
+      btn.textContent = 'Save Changes'; btn.disabled = false;
+    }).catch(function(err) {
+      showToast('Error: ' + err.message, 'error');
+      btn.textContent = 'Save Changes'; btn.disabled = false;
+    });
+  });
+
+  /* ---- Package Matrix ---- */
+  var matrixSection = document.getElementById('matrixSection');
+  var matrixContent = document.getElementById('matrixContent');
+
+  document.getElementById('matrixBtn').addEventListener('click', function() {
+    this.classList.toggle('active');
+    matrixSection.classList.toggle('open');
+    if (matrixSection.classList.contains('open')) renderMatrix();
+  });
+
+  function renderMatrix() {
+    if (allPackages.length === 0) {
+      matrixContent.innerHTML = '<div class="matrix-empty">No packages defined yet.</div>';
+      return;
+    }
+    // Filter games that have at least one package subscription
+    var subGames = allGames.filter(function(g) {
+      return g.sharedAssetPackages && g.sharedAssetPackages.length > 0;
+    });
+    if (subGames.length === 0) {
+      matrixContent.innerHTML = '<div class="matrix-empty">No games subscribed to packages yet.</div>';
+      return;
+    }
+    var h = '<table class="matrix-table"><thead><tr><th>Game</th>';
+    allPackages.forEach(function(pkg) {
+      h += '<th title="' + esc(pkg.description || pkg.name) + '">' + esc(pkg.name) + '</th>';
+    });
+    h += '</tr></thead><tbody>';
+    subGames.forEach(function(g) {
+      h += '<tr><td>' + esc(g.name) + '</td>';
+      allPackages.forEach(function(pkg) {
+        var has = g.sharedAssetPackages.indexOf(pkg.id) !== -1;
+        h += '<td><span class="matrix-dot ' + (has ? 'on' : 'off') + '"></span></td>';
+      });
+      h += '</tr>';
+    });
+    h += '</tbody></table>';
+    matrixContent.innerHTML = h;
+  }
+
   /* ---- Init ---- */
   console.log('[Dashboard] Initializing...');
-  loadData().then(function(games) {
-    console.log('[Dashboard] Init complete, rendering', games.length, 'games');
-    allGames = games;
+  Promise.all([loadData(), loadPackages()]).then(function(results) {
+    allGames = results[0];
+    allPackages = results[1];
+    console.log('[Dashboard] Init complete, rendering', allGames.length, 'games,', allPackages.length, 'packages');
     filterAndRender();
     updateSortUI();
     initColumnResize();
   }).catch(function(err) {
     console.error('[Dashboard] Init error:', err);
   });
+})();
+</script>
+
+<script>
+/* ---- App Shell: Mode switching, Pin tray, Launchers ---- */
+(function() {
+  var currentMode = 'lumina';
+
+  // Mode tabs
+  document.querySelectorAll('.mode-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      if (tab.dataset.mode === currentMode) return;
+      currentMode = tab.dataset.mode;
+      document.querySelectorAll('.mode-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.mode === currentMode); });
+      document.querySelectorAll('.mode-content').forEach(function(el) { el.classList.toggle('active', el.id === 'mode-' + currentMode); });
+    });
+  });
+
+  // Init tab modules
+  if (typeof ClaudeTab !== 'undefined') ClaudeTab.init();
+  if (typeof HunyuanTab !== 'undefined') HunyuanTab.init();
+  if (typeof AudioTab !== 'undefined') AudioTab.init();
+
+  // Launchers
+  var launchLumina = document.getElementById('launch-claude-lumina');
+  if (launchLumina) launchLumina.addEventListener('click', function() { fetch('/api/claude/lumina', { method: 'POST' }).catch(function(){}); });
+  var launchHunyuan = document.getElementById('launch-claude-hunyuan');
+  if (launchHunyuan) launchHunyuan.addEventListener('click', function() { fetch('/api/claude/hunyuan', { method: 'POST' }).catch(function(){}); });
+
+  // Pin tray
+  var pinnedGames = [];
+  try { var s = localStorage.getItem('lumina-pinned-games'); if (s) pinnedGames = JSON.parse(s); } catch(e) {}
+
+  function savePins() { try { localStorage.setItem('lumina-pinned-games', JSON.stringify(pinnedGames)); } catch(e) {} }
+
+  window.luminaPinGame = function(gameId, name, completion) {
+    if (pinnedGames.some(function(p) { return p.id === gameId; })) return;
+    if (pinnedGames.length >= 4) pinnedGames.shift();
+    pinnedGames.push({ id: gameId, name: name, completion: completion });
+    savePins();
+    renderPinTray();
+  };
+
+  window.luminaUnpinGame = function(gameId) {
+    pinnedGames = pinnedGames.filter(function(p) { return p.id !== gameId; });
+    savePins();
+    renderPinTray();
+  };
+
+  function renderPinTray() {
+    var tray = document.getElementById('pin-tray');
+    if (!tray) return;
+    if (pinnedGames.length === 0) { tray.innerHTML = ''; return; }
+    var h = '';
+    for (var i = 0; i < pinnedGames.length; i++) {
+      var p = pinnedGames[i];
+      var pct = p.completion != null ? p.completion + '%' : '--';
+      h += '<div class="pin-chip" title="' + (p.name || p.id) + '">';
+      h += '<span class="pin-chip-name">' + (p.name || p.id) + '</span>';
+      h += '<span class="pin-chip-pct">' + pct + '</span>';
+      h += '<span class="pin-chip-unpin" data-unpin="' + p.id + '">&times;</span>';
+      h += '</div>';
+    }
+    tray.innerHTML = h;
+    tray.querySelectorAll('.pin-chip-unpin').forEach(function(btn) {
+      btn.addEventListener('click', function(e) { e.stopPropagation(); window.luminaUnpinGame(btn.dataset.unpin); });
+    });
+    tray.querySelectorAll('.pin-chip').forEach(function(chip) {
+      chip.addEventListener('click', function(e) {
+        if (e.target.dataset.unpin) return;
+        if (currentMode !== 'lumina') {
+          currentMode = 'lumina';
+          document.querySelectorAll('.mode-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.mode === 'lumina'); });
+          document.querySelectorAll('.mode-content').forEach(function(el) { el.classList.toggle('active', el.id === 'mode-lumina'); });
+        }
+      });
+    });
+  }
+  renderPinTray();
 })();
 </script>
 </body>

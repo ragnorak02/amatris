@@ -1,6 +1,6 @@
 # Batch Operations Guide
 
-> Safe batch refactoring workflow for the Amatris game portfolio.
+> Safe batch refactoring workflow for the Lumina game portfolio.
 > All operations follow a PLAN → APPROVE → APPLY model.
 
 ---
@@ -84,7 +84,7 @@ PLAN: Read all claude.md files
       Extract checkbox completion %
       Detect current phase
 APPLY: Update games_index.md with fresh data
-       Regenerate amatris dashboard.html + games_heatmap.html
+       Regenerate lumina dashboard.html + games_heatmap.html
 ```
 
 ---

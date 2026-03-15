@@ -1,5 +1,5 @@
 /* ============================================================
-   studio.js — Studio Dashboard for AMATRIS
+   studio.js — Studio Dashboard for LUMINA
    Sidebar + dense portrait card grid with InputManager wiring.
    ============================================================ */
 
@@ -19,25 +19,32 @@ var Studio = (function () {
     var fileFocusIndex = -1;
     var lastSelectedPerTab = {};
     var currentNavTab = 'library';
+    var currentMode = 'lumina';
+    var pinnedGames = [];
     var DETAIL_TABS = ['overview', 'status', 'commits', 'tests', 'devnotes', 'changelog', 'files'];
     var CACHE_TTL = 30000;
     var runningPollTimer = null;
     var POLL_INTERVAL = 3000;
+    var gamesLoadFailed = false;
 
     /* ---- Genre categories ---- */
     var GENRE_MAP = [
         { key: 'all', label: 'All', icon: '\uD83C\uDFAE' },
+        { key: '2d', label: '2D', icon: '\uD83D\uDDBC' },
+        { key: '3d', label: '3D', icon: '\uD83D\uDCE6' },
         { key: 'rpg', label: 'RPG', icon: '\u2694\uFE0F' },
         { key: 'action', label: 'Action', icon: '\uD83D\uDCA5' },
+        { key: 'racing', label: 'Racing', icon: '\uD83C\uDFCE' },
         { key: 'adventure', label: 'Adventure', icon: '\uD83C\uDF0D' },
-        { key: 'strategy', label: 'Strategy', icon: '\uD83C\uDFF0' }
+        { key: 'strategy', label: 'Strategy', icon: '\uD83C\uDFF0' },
+        { key: 'platformer', label: 'Platformer', icon: '\uD83C\uDFC3' },
+        { key: 'roguelite', label: 'Roguelite', icon: '\uD83D\uDD04' }
     ];
 
     /* ---- Engine categories ---- */
     var ENGINE_MAP = [
         { key: 'all', label: 'All', icon: '\uD83D\uDCBB' },
         { key: 'godot', label: 'Godot', icon: '\uD83D\uDD35' },
-        { key: 'unity', label: 'Unity', icon: '\u26AA' },
         { key: 'html', label: 'HTML5', icon: '\uD83C\uDF10' }
     ];
 
@@ -57,13 +64,32 @@ var Studio = (function () {
         renderToolbar();
         fetchGames();
 
-        // Menu tab handler
-        document.querySelectorAll('.menu-tab').forEach(function (tab) {
+        // Load pinned games from localStorage
+        try {
+            var saved = localStorage.getItem('lumina-pinned-games');
+            if (saved) pinnedGames = JSON.parse(saved);
+        } catch (e) {}
+
+        // Mode tab switching
+        document.querySelectorAll('.mode-tab').forEach(function (tab) {
             tab.addEventListener('click', function () {
-                document.querySelectorAll('.menu-tab').forEach(function (t) { t.classList.remove('active'); });
-                tab.classList.add('active');
+                switchMode(tab.dataset.mode);
             });
         });
+
+        // Header launcher buttons
+        var launchLumina = document.getElementById('launch-claude-lumina');
+        if (launchLumina) {
+            launchLumina.addEventListener('click', function () {
+                fetch('/api/claude/lumina', { method: 'POST' }).catch(function () {});
+            });
+        }
+        var launchHunyuan = document.getElementById('launch-claude-hunyuan');
+        if (launchHunyuan) {
+            launchHunyuan.addEventListener('click', function () {
+                fetch('/api/claude/hunyuan', { method: 'POST' }).catch(function () {});
+            });
+        }
 
         // Keyboard navigation via InputManager
         document.addEventListener('keydown', function (e) {
@@ -272,6 +298,7 @@ var Studio = (function () {
         fetch('/api/games')
             .then(function (r) { return r.json(); })
             .then(function (data) {
+                gamesLoadFailed = false;
                 games = data;
                 try {
                     sessionStorage.setItem('studio-games', JSON.stringify(games));
@@ -281,6 +308,7 @@ var Studio = (function () {
                 if (callback) callback();
             })
             .catch(function () {
+                gamesLoadFailed = true;
                 games = [];
                 onGamesLoaded();
                 if (callback) callback();
@@ -290,6 +318,7 @@ var Studio = (function () {
     function onGamesLoaded() {
         renderSidebar();
         renderGameList();
+        renderPinTray();
     }
 
     /* ============================================================
@@ -477,11 +506,18 @@ var Studio = (function () {
     function matchesGenre(game, key) {
         if (key === 'all') return true;
         var g = game.genre.toLowerCase();
+        var tags = (game.tags || []).join(' ').toLowerCase();
+        var combined = g + ' ' + tags;
         switch (key) {
-            case 'rpg': return g.indexOf('rpg') !== -1;
-            case 'action': return g.indexOf('action') !== -1 || g.indexOf('fighter') !== -1 || g.indexOf('platform') !== -1;
-            case 'adventure': return g.indexOf('adventure') !== -1 || g.indexOf('fishing') !== -1;
-            case 'strategy': return g.indexOf('tactics') !== -1 || g.indexOf('defense') !== -1 || g.indexOf('tower') !== -1;
+            case '2d': return combined.indexOf('2d') !== -1 || combined.indexOf('side-scroll') !== -1 || combined.indexOf('platformer') !== -1;
+            case '3d': return combined.indexOf('3d') !== -1;
+            case 'rpg': return combined.indexOf('rpg') !== -1;
+            case 'action': return combined.indexOf('action') !== -1 || combined.indexOf('fighter') !== -1 || combined.indexOf('combat') !== -1;
+            case 'racing': return combined.indexOf('racing') !== -1 || combined.indexOf('drift') !== -1 || combined.indexOf('driving') !== -1;
+            case 'adventure': return combined.indexOf('adventure') !== -1 || combined.indexOf('fishing') !== -1 || combined.indexOf('exploration') !== -1;
+            case 'strategy': return combined.indexOf('tactics') !== -1 || combined.indexOf('defense') !== -1 || combined.indexOf('tower') !== -1 || combined.indexOf('strategy') !== -1;
+            case 'platformer': return combined.indexOf('platformer') !== -1 || combined.indexOf('platform') !== -1 || combined.indexOf('side-scroll') !== -1;
+            case 'roguelite': return combined.indexOf('roguelite') !== -1 || combined.indexOf('roguelike') !== -1 || combined.indexOf('dungeon') !== -1;
             default: return true;
         }
     }
@@ -580,6 +616,12 @@ var Studio = (function () {
         listEl = document.getElementById('studio-game-list');
         if (!listEl) return;
 
+        // Show loading state if games haven't loaded yet
+        if (games.length === 0 && !gamesLoadFailed) {
+            listEl.innerHTML = '<div class="studio-empty"><div class="studio-loading-spinner"></div><div class="studio-empty-text">Loading games...</div></div>';
+            return;
+        }
+
         var filtered = getFilteredGames();
 
         // Update count
@@ -639,7 +681,49 @@ var Studio = (function () {
             });
         });
 
+        // Wire expand action buttons
+        listEl.querySelectorAll('.expand-action').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                handleExpandAction(btn.dataset.action, btn.dataset.gameId);
+            });
+        });
+
         updateSelectionClasses();
+    }
+
+    /* ============================================================
+       EXPAND ROW ACTIONS — Run, Claude, Terminal, VS Code, Folder, Pin
+       ============================================================ */
+    function handleExpandAction(action, gameId) {
+        var game = findGame(gameId);
+        if (!game) return;
+
+        switch (action) {
+            case 'run':
+                launchGame(game);
+                break;
+            case 'claude':
+                fetch('/api/claude/' + encodeURIComponent(game.folder || game.id), { method: 'POST' }).catch(function () {});
+                break;
+            case 'terminal':
+                fetch('/api/open-terminal/' + encodeURIComponent(game.folder || game.id), { method: 'POST' }).catch(function () {});
+                break;
+            case 'vscode':
+                fetch('/api/open-vscode/' + encodeURIComponent(game.folder || game.id), { method: 'POST' }).catch(function () {});
+                break;
+            case 'folder':
+                fetch('/api/open-folder/' + encodeURIComponent(game.folder || game.id), { method: 'POST' }).catch(function () {});
+                break;
+            case 'pin':
+                if (isGamePinned(gameId)) {
+                    unpinGame(gameId);
+                } else {
+                    pinGame(gameId);
+                }
+                renderGameList();
+                break;
+        }
     }
 
     /* ============================================================
@@ -648,6 +732,8 @@ var Studio = (function () {
     function renderCard(game) {
         var isSelected = selectedId === game.id;
         var cls = 'game-card' + (isSelected ? ' selected' : '');
+        var pinLabel = isGamePinned(game.id) ? '\u2605' : '\u2606';
+        var pinTitle = isGamePinned(game.id) ? 'Unpin' : 'Pin to tray';
 
         return '<div class="' + cls + '" data-game-id="' + game.id + '">' +
             '<div class="game-card-art" style="background: linear-gradient(160deg, ' + game.color + ' 0%, #0a0a1a 80%);">' +
@@ -666,6 +752,26 @@ var Studio = (function () {
                     '<span class="game-card-pct">' + game.completion + '%</span>' +
                 '</div>' +
                 renderFeatureDots(game) +
+            '</div>' +
+            '<div class="card-expand-actions">' +
+                '<button class="expand-action" data-action="run" data-game-id="' + game.id + '" title="Run Game">' +
+                    '<span class="ea-icon">\u25B6</span><span class="ea-label">Run</span>' +
+                '</button>' +
+                '<button class="expand-action" data-action="claude" data-game-id="' + game.id + '" title="Open Claude">' +
+                    '<span class="ea-icon">\u2666</span><span class="ea-label">Claude</span>' +
+                '</button>' +
+                '<button class="expand-action" data-action="terminal" data-game-id="' + game.id + '" title="Open Terminal">' +
+                    '<span class="ea-icon">&gt;_</span><span class="ea-label">Terminal</span>' +
+                '</button>' +
+                '<button class="expand-action" data-action="vscode" data-game-id="' + game.id + '" title="Open VS Code">' +
+                    '<span class="ea-icon">{}</span><span class="ea-label">VS Code</span>' +
+                '</button>' +
+                '<button class="expand-action" data-action="folder" data-game-id="' + game.id + '" title="Open Folder">' +
+                    '<span class="ea-icon">\uD83D\uDCC2</span><span class="ea-label">Folder</span>' +
+                '</button>' +
+                '<button class="expand-action" data-action="pin" data-game-id="' + game.id + '" title="' + pinTitle + '">' +
+                    '<span class="ea-icon">' + pinLabel + '</span><span class="ea-label">Pin</span>' +
+                '</button>' +
             '</div>' +
         '</div>';
     }
@@ -777,11 +883,8 @@ var Studio = (function () {
        TAB SWITCHING — LB/RB cycle through nav tabs
        ============================================================ */
     function cycleNavTab(dir) {
-        var tabs = document.querySelectorAll('.menu-tab');
+        var tabs = document.querySelectorAll('.mode-tab');
         if (tabs.length === 0) return;
-
-        // Save current selection
-        lastSelectedPerTab[currentNavTab] = selectedId;
 
         var currentIdx = -1;
         for (var i = 0; i < tabs.length; i++) {
@@ -798,42 +901,105 @@ var Studio = (function () {
         if (newIdx < 0) newIdx = tabs.length - 1;
         if (newIdx >= tabs.length) newIdx = 0;
 
-        switchNavTab(tabs[newIdx].dataset.tab);
+        tabs[newIdx].classList.add('gamepad-focus');
+        switchMode(tabs[newIdx].dataset.mode);
     }
 
     function switchNavTab(tabName) {
-        // Save current
-        lastSelectedPerTab[currentNavTab] = selectedId;
+        // Legacy compat — maps old tab names to modes
+        switchMode(tabName === 'library' ? 'lumina' : tabName);
+    }
 
-        var tabs = document.querySelectorAll('.menu-tab');
-        tabs.forEach(function (t) {
-            t.classList.remove('active');
-            t.classList.remove('gamepad-focus');
-            if (t.dataset.tab === tabName) {
-                t.classList.add('active');
-                t.classList.add('gamepad-focus');
-            }
+    /* ============================================================
+       MODE SWITCHING
+       ============================================================ */
+    function switchMode(mode) {
+        if (mode === currentMode) return;
+        currentMode = mode;
+
+        // Update tab active states
+        document.querySelectorAll('.mode-tab').forEach(function (t) {
+            t.classList.toggle('active', t.dataset.mode === mode);
         });
 
-        currentNavTab = tabName;
+        // Show/hide mode containers
+        document.querySelectorAll('.mode-content').forEach(function (el) {
+            el.classList.toggle('active', el.id === 'mode-' + mode);
+        });
+    }
 
-        // Restore selection
-        if (lastSelectedPerTab[tabName]) {
-            var restored = lastSelectedPerTab[tabName];
-            var filtered = getFilteredGames();
-            var found = filtered.some(function (g) { return g.id === restored; });
-            if (found) {
-                selectGame(restored);
-                // Find grid index
-                var cards = document.querySelectorAll('.game-card');
-                for (var i = 0; i < cards.length; i++) {
-                    if (cards[i].dataset.gameId === restored) {
-                        gridFocusIndex = i;
-                        break;
-                    }
-                }
-            }
+    /* ============================================================
+       PIN TRAY
+       ============================================================ */
+    function pinGame(gameId) {
+        if (pinnedGames.indexOf(gameId) !== -1) return;
+        if (pinnedGames.length >= 4) pinnedGames.shift(); // max 4
+        pinnedGames.push(gameId);
+        savePins();
+        renderPinTray();
+    }
+
+    function unpinGame(gameId) {
+        pinnedGames = pinnedGames.filter(function (id) { return id !== gameId; });
+        savePins();
+        renderPinTray();
+    }
+
+    function isGamePinned(gameId) {
+        return pinnedGames.indexOf(gameId) !== -1;
+    }
+
+    function savePins() {
+        try { localStorage.setItem('lumina-pinned-games', JSON.stringify(pinnedGames)); } catch (e) {}
+    }
+
+    function renderPinTray() {
+        var tray = document.getElementById('pin-tray');
+        if (!tray) return;
+
+        if (pinnedGames.length === 0) {
+            tray.innerHTML = '';
+            return;
         }
+
+        var html = '';
+        for (var i = 0; i < pinnedGames.length; i++) {
+            var game = findGame(pinnedGames[i]);
+            if (!game) continue;
+
+            var pct = game.completion != null ? game.completion + '%' : '--';
+            var phase = game.phase != null ? 'P' + game.phase : '';
+            var icon = game.icon || '\uD83C\uDFAE';
+
+            html += '<div class="pin-chip" data-game-id="' + escapeHtml(game.id) + '" title="' + escapeHtml(game.name) + '">';
+            html += '<span class="pin-chip-icon">' + icon + '</span>';
+            html += '<span class="pin-chip-info">';
+            html += '<span class="pin-chip-name">' + escapeHtml(game.name) + '</span>';
+            html += '<span class="pin-chip-meta">' + phase + '</span>';
+            html += '</span>';
+            html += '<span class="pin-chip-pct">' + pct + '</span>';
+            html += '<span class="pin-chip-unpin" data-unpin="' + escapeHtml(game.id) + '" title="Unpin">&times;</span>';
+            html += '</div>';
+        }
+        tray.innerHTML = html;
+
+        // Wire click → select game and switch to Lumina mode
+        tray.querySelectorAll('.pin-chip').forEach(function (chip) {
+            chip.addEventListener('click', function (e) {
+                if (e.target.dataset.unpin) return;
+                var gid = chip.dataset.gameId;
+                if (currentMode !== 'lumina') switchMode('lumina');
+                selectGame(gid);
+            });
+        });
+
+        // Wire unpin buttons
+        tray.querySelectorAll('.pin-chip-unpin').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                unpinGame(btn.dataset.unpin);
+            });
+        });
     }
 
     /* ============================================================
@@ -1420,6 +1586,10 @@ var Studio = (function () {
         getGridFocusIndex: function () { return gridFocusIndex; },
         getGridColumns: getGridColumns,
         switchNavTab: switchNavTab,
-        getFilteredGames: getFilteredGames
+        switchMode: switchMode,
+        getFilteredGames: getFilteredGames,
+        pinGame: pinGame,
+        unpinGame: unpinGame,
+        isGamePinned: isGamePinned
     };
 })();

@@ -1,5 +1,5 @@
 /* ============================================================
-   input-manager.js — Input abstraction layer for AMATRIS
+   input-manager.js — Input abstraction layer for LUMINA
    Semantic action pub/sub + context stack.
    Keyboard and gamepad both emit to the same bus.
    ============================================================ */

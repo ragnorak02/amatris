@@ -17,6 +17,7 @@
 !*.json
 !*.ico
 !server.js
+!electron-main.js
 !index.html
 
 # Always ignore binaries and node artifacts

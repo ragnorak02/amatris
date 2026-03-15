@@ -1,6 +1,6 @@
 # Portfolio Schema: project_status.json (v1)
 
-Canonical, machine-readable metadata for each game in the Amatris portfolio.
+Canonical, machine-readable metadata for each game in the Lumina portfolio.
 Supplements `game.config.json` (which handles launcher-specific config like engine, launch type, etc.).
 
 ## Location

@@ -5,6 +5,9 @@
 document.addEventListener('DOMContentLoaded', function () {
     Background.init();
     Studio.init();
+    if (typeof ClaudeTab !== 'undefined') ClaudeTab.init();
+    if (typeof HunyuanTab !== 'undefined') HunyuanTab.init();
+    if (typeof AudioTab !== 'undefined') AudioTab.init();
     FilePreview.init();
     Overlay.init();
     GamepadInput.init();

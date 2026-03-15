@@ -54,7 +54,13 @@
       "Bash(do echo \"=== $dir ===\")",
       "Bash(git -C \"$dir\" add project_status.json)",
       "Bash(git -C:*)",
-      "Bash(fuser:*)"
+      "Bash(fuser:*)",
+      "Bash(du:*)",
+      "Bash(\"Z:/godot/godot.exe\":*)",
+      "Bash(mv:*)",
+      "Read(//c/Users/nick/Desktop/**)",
+      "Bash(pip show:*)",
+      "Bash(cd:*)"
     ]
   }
 }

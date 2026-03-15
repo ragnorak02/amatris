@@ -20,9 +20,9 @@ var GameView = (function () {
         if (typeof InputManager !== 'undefined') InputManager.pushContext('gameplay');
 
         // Hide launcher UI
-        document.getElementById('portal-header').classList.add('hidden');
-        document.getElementById('studio-view').classList.add('hidden');
-        document.getElementById('top-menu').classList.add('hidden');
+        document.getElementById('app-shell').classList.add('hidden');
+        var activeMode = document.querySelector('.mode-content.active');
+        if (activeMode) activeMode.classList.add('hidden');
 
         // Show game view
         view.classList.remove('hidden');
@@ -102,9 +102,9 @@ var GameView = (function () {
         }
 
         // Show launcher UI
-        document.getElementById('portal-header').classList.remove('hidden');
-        document.getElementById('studio-view').classList.remove('hidden');
-        document.getElementById('top-menu').classList.remove('hidden');
+        document.getElementById('app-shell').classList.remove('hidden');
+        var activeMode = document.querySelector('.mode-content.active');
+        if (activeMode) activeMode.classList.remove('hidden');
     }
 
     /* Restart the current game */
