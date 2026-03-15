@@ -168,6 +168,95 @@ Lumina MUST NOT:
 
 ---
 
+# Phase 9 — Electron Desktop App
+
+## Native Application
+- [x] Electron wrapper (electron-main.js)
+- [x] Dark title bar matching LUMINA theme
+- [x] lumina-crystal.ico as window/taskbar icon
+- [x] Auto-hidden menu bar (Alt to show)
+- [x] F12 DevTools, Ctrl+R reload, Ctrl+/-/0 zoom
+- [x] External links open in default browser
+- [x] Server starts inside Electron process
+- [x] `npm start` launches native app
+- [x] `npm run server` / `npm run dev` for browser-only mode
+- [x] launch_dashboard.bat updated to launch Electron
+
+## Packaging
+- [ ] electron-builder config for .exe installer
+- [ ] Auto-update support
+- [ ] System tray integration
+
+---
+
+# Phase 10 — Hunyuan 3D Asset Browser
+
+## Folder Tree Browser
+- [x] GET /api/browse endpoint (lazy directory listing)
+- [x] Collapsible folder tree in left pane
+- [x] Auto-expands assets/models/hunyuan on init
+- [x] File type icons (models=cyan, images=purple)
+- [x] Model count badges per folder
+- [x] Search/filter tree
+- [x] Path traversal security (restricted to project root)
+
+## 3D Model Viewer
+- [x] Three.js GLTFLoader (r137 CDN)
+- [x] OrbitControls (drag rotate, scroll zoom, shift+drag pan)
+- [x] Auto-fit camera to model bounding box
+- [x] Ambient + 2x directional lighting
+- [x] Grid helper (toggleable)
+- [x] Image preview for .png/.jpg files
+
+## View Options
+- [x] Show Textures toggle (strips/restores texture maps)
+- [x] Wireframe overlay toggle
+- [x] Show Grid toggle
+- [x] Auto-Rotate toggle (turntable)
+- [x] Clay / Matcap toggle (neutral material for form evaluation)
+- [x] Options apply in-place without reloading model
+
+## Asset Approval Workflow
+- [x] POST /api/assets/approve endpoint
+- [x] Approve single model → copies to shared_assets/3d/
+- [x] Approve all models in directory (batch)
+- [x] Preview image (.glb.png) copied alongside model
+- [x] Toast notifications for approval feedback
+- [x] POST /api/open-path endpoint (reveal in Explorer)
+
+## Generation Controls (Stubs)
+- [x] Generate Model button (single file)
+- [x] Generate Models button (folder)
+- [ ] Wire up to Hunyuan API
+- [ ] Batch generation queue
+- [ ] Generation progress tracking
+
+---
+
+# Phase 11 — Audio Asset Browser
+
+## Audio Tab
+- [x] 3-pane layout (list, player, detail)
+- [x] Audio file listing with search and filters
+- [x] Category filtering (Music/SFX/Ambient/UI)
+- [x] Format filtering
+- [x] Waveform visualization
+- [x] Transport controls (play/pause/stop)
+- [x] Volume and loop controls
+
+---
+
+# Phase 12 — Claude Sessions Monitor
+
+## Claude Tab
+- [x] Session list with status badges
+- [x] Token usage display
+- [x] Context bar visualization
+- [x] Session detail panel
+- [x] Summary strip (Active Sessions, Total Tokens, Pending Input, Completed Today)
+
+---
+
 # Non-Negotiable Rules
 
 - Dashboard reads JSON only.
@@ -177,6 +266,8 @@ Lumina MUST NOT:
 - Git hooks handle timestamp automation.
 - The dashboard HTML file is `lumina dashboard.html` — there is no other dashboard HTML file.
 - Package definitions live in `shared_assets/packages.json`.
+- The Electron entry point is `electron-main.js`.
+- `npm start` launches the Electron app; `npm run server` for browser-only.
 
 ---
 
@@ -184,4 +275,4 @@ Lumina MUST NOT:
 
 Current Goal: Phase 7 — Stability & Scalability
 Current Task: Ensure scalability and resilience
-Next Milestone: Phase 7 complete
+Next Milestone: Phase 7 complete, then wire up Hunyuan generation
